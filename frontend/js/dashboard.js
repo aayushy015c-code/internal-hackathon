@@ -1,138 +1,92 @@
-// dashboard.js
-// ------------
-// Two independent data sources feed this page:
-//
-// 1. A BroadcastChannel ("silent-signal-live") - the /call tab posts every
-//    /analyze result onto this channel the instant it gets one back. This
-//    is what makes the risk meter feel "live" without any polling.
-// 2. A periodic poll of GET /api/alerts on the core API, which is the
-//    permanent alert history (and where cancelling a false alarm happens).
+// Dashboard: live scores from the call tab + alert history from the core API.
 
+const el = (id) => document.getElementById(id);
 const liveChannel = new BroadcastChannel("silent-signal-live");
-const noLiveBanner = document.getElementById("no-live-banner");
+let lastMessageTime = 0;
 
-let lastLiveMessageAt = 0;
-
+// a new result from the call tab (every ~4 seconds)
 liveChannel.onmessage = (event) => {
-  lastLiveMessageAt = Date.now();
-  noLiveBanner.classList.add("hidden");
-  _renderLiveResult(event.data);
+  lastMessageTime = Date.now();
+  el("no-live-banner").classList.add("hidden");
+  showResult(event.data);
 };
 
-// If nothing has arrived in a while, assume there's no live call and say so.
+// no results for 10 seconds = no call running
 setInterval(() => {
-  if (lastLiveMessageAt && Date.now() - lastLiveMessageAt > 8000) {
-    noLiveBanner.classList.remove("hidden");
-    lastLiveMessageAt = 0;
-  }
+  if (Date.now() - lastMessageTime > 10000) el("no-live-banner").classList.remove("hidden");
 }, 2000);
 
-function _renderLiveResult(result) {
-  const rollingBar = document.getElementById("rolling-bar");
-  const rollingValue = document.getElementById("rolling-value");
-  const lastUpdated = document.getElementById("last-updated");
-  const triggerBanner = document.getElementById("trigger-banner");
-
-  const rolling = Math.max(0, Math.min(100, result.rolling_score));
-  rollingBar.style.width = `${rolling}%`;
-  rollingBar.className =
-    "h-full transition-all duration-300 " + (rolling >= 65 ? "bg-red-500" : rolling >= 40 ? "bg-amber-400" : "bg-emerald-500");
-  rollingValue.textContent = String(result.rolling_score);
-  lastUpdated.textContent = `updated ${new Date().toLocaleTimeString()}`;
-
-  if (result.alert_triggered) {
-    triggerBanner.classList.remove("hidden");
-    triggerBanner.textContent = `ALERT sent (${result.trigger_path}) at ${new Date().toLocaleTimeString()}`;
-  }
-
-  const signals = result.signals || {};
-  if (signals.pitch) {
-    document.getElementById("pitch-bar").style.width = `${Math.min(100, Math.abs(signals.pitch.delta_pct))}%`;
-    document.getElementById("pitch-value").textContent = `${signals.pitch.value_hz} Hz (${signals.pitch.delta_pct}% vs baseline)`;
-  }
-  if (signals.energy) {
-    document.getElementById("energy-bar").style.width = `${Math.min(100, Math.abs(signals.energy.delta_pct))}%`;
-    document.getElementById("energy-value").textContent = `${signals.energy.delta_pct}% vs baseline`;
-  }
-  if (signals.silence) {
-    document.getElementById("silence-bar").style.width = `${Math.min(100, signals.silence.ratio * 100)}%`;
-    document.getElementById("silence-value").textContent = `${Math.round(signals.silence.ratio * 100)}% of chunk`;
-  }
-  if (signals.codeword) {
-    document.getElementById("codeword-value").textContent = signals.codeword.matched
-      ? `MATCHED "${signals.codeword.phrase}" (${signals.codeword.confidence}%)`
-      : "not matched";
-  }
+function setBar(id, percent) {
+  el(id).style.width = Math.max(0, Math.min(100, percent)) + "%";
 }
 
-// ---- Alert history (core API) ----
+function showResult(r) {
+  setBar("rolling-bar", r.rolling_score);
+  el("rolling-bar").style.background = r.rolling_score >= 65 ? "#c0392b" : r.rolling_score >= 40 ? "#e67e22" : "#27ae60";
+  el("rolling-value").textContent = r.rolling_score;
+  el("last-updated").textContent = "(updated " + new Date().toLocaleTimeString() + ")";
 
-async function refreshAlertHistory() {
-  const listEl = document.getElementById("alert-list");
+  if (r.alert_triggered) {
+    el("trigger-banner").classList.remove("hidden");
+    el("trigger-banner").textContent = "Alert sent (" + r.trigger_path + ") at " + new Date().toLocaleTimeString();
+  }
+
+  const s = r.signals;
+  setBar("pitch-bar", s.pitch.delta_pct);
+  el("pitch-value").textContent = s.pitch.value_hz + " Hz (" + s.pitch.delta_pct + "% vs normal)";
+  setBar("energy-bar", s.energy.delta_pct);
+  el("energy-value").textContent = s.energy.delta_pct + "% vs normal";
+  setBar("silence-bar", s.silence.ratio * 100);
+  el("silence-value").textContent = Math.round(s.silence.ratio * 100) + "% of the clip";
+  el("codeword-value").textContent = s.codeword.matched ? 'heard "' + s.codeword.phrase + '"' : "not heard";
+}
+
+// ---- Alert history ----
+
+async function loadAlerts() {
   try {
     const alerts = await Api.Alerts.list();
     if (alerts.length === 0) {
-      listEl.innerHTML = '<p class="text-slate-500">No alerts yet.</p>';
+      el("alert-list").innerHTML = '<p class="muted">No alerts yet.</p>';
       return;
     }
-    listEl.innerHTML = alerts.map(_renderAlertRow).join("");
-    listEl.querySelectorAll("[data-cancel-id]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        btn.disabled = true;
-        btn.textContent = "Cancelling...";
-        try {
-          await Api.Alerts.cancel(btn.dataset.cancelId);
-          await refreshAlertHistory();
-        } catch (err) {
-          alert(`Could not cancel: ${err.message}`);
-          btn.disabled = false;
-          btn.textContent = "Mark false alarm";
-        }
-      });
-    });
+    let html = "<table><tr><th>Time</th><th>Why</th><th>Status</th></tr>";
+    for (const a of alerts) {
+      html += "<tr>";
+      html += "<td>" + new Date(a.createdAt).toLocaleString() + "</td>";
+      html += "<td>" + escapeHtml(a.reasons);
+      if (a.transcriptSnippet) html += '<br><span class="muted">"...' + escapeHtml(a.transcriptSnippet) + '"</span>';
+      html += "</td>";
+      html += '<td class="status-' + a.status + '">' + a.status;
+      if (a.status === "PENDING") html += '<br><button onclick="cancelAlert(' + a.id + ', this)">False alarm</button>';
+      html += "</td></tr>";
+    }
+    el("alert-list").innerHTML = html + "</table>";
   } catch (err) {
-    listEl.innerHTML = `<p class="text-red-400">Could not load alerts: ${err.message}</p>`;
+    el("alert-list").textContent = "Could not load alerts (is the core API running?) " + err.message;
   }
 }
 
-function _renderAlertRow(alert) {
-  const statusColor =
-    alert.status === "ACKNOWLEDGED" ? "text-emerald-400" : alert.status === "CANCELLED" ? "text-slate-500" : "text-red-400";
-  const time = new Date(alert.createdAt).toLocaleString();
-  const cancelButton =
-    alert.status === "PENDING"
-      ? `<button data-cancel-id="${alert.id}" class="text-xs bg-slate-700 hover:bg-slate-600 rounded px-2 py-1">Mark false alarm</button>`
-      : "";
-
-  return `
-    <div class="border border-slate-700 rounded-lg px-3 py-2">
-      <div class="flex justify-between items-start gap-3">
-        <div>
-          <p class="font-medium">${alert.triggerPath} <span class="${statusColor} text-xs">(${alert.status})</span></p>
-          <p class="text-xs text-slate-400">${time}</p>
-          <p class="text-xs text-slate-300 mt-1">${alert.reasons || ""}</p>
-          ${alert.transcriptSnippet ? `<p class="text-xs text-slate-500 mt-1">"...${alert.transcriptSnippet}"</p>` : ""}
-        </div>
-        ${cancelButton}
-      </div>
-    </div>
-  `;
+async function cancelAlert(id, button) {
+  button.disabled = true;
+  try {
+    await Api.Alerts.cancel(id);
+  } catch (err) {
+    alert("Could not cancel: " + err.message);
+  }
+  loadAlerts();
 }
 
-document.getElementById("test-alert-btn").addEventListener("click", async (event) => {
-  const btn = event.currentTarget;
-  btn.disabled = true;
-  btn.textContent = "Sending...";
+el("test-alert-btn").onclick = async () => {
+  el("test-alert-btn").disabled = true;
   try {
     await Api.Alerts.sendTestAlert();
-    await refreshAlertHistory();
   } catch (err) {
-    alert(`Could not send test alert: ${err.message}`);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Send test alert";
+    alert("Could not send test alert: " + err.message);
   }
-});
+  el("test-alert-btn").disabled = false;
+  loadAlerts();
+};
 
-refreshAlertHistory();
-setInterval(refreshAlertHistory, 5000);
+loadAlerts();
+setInterval(loadAlerts, 5000);

@@ -4,7 +4,6 @@ import com.hackathon.distress.dto.AlertRequest;
 import com.hackathon.distress.entity.Alert;
 import com.hackathon.distress.service.AlertService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -12,61 +11,49 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * AlertController.java
- * ----------------------
- * REST endpoints for alerts. Two very different callers hit this class:
- *   - The analysis service (FastAPI) calls POST /api/alerts when it
- *     detects distress. This is server-to-server, both running on the
- *     same laptop during the hackathon.
- *   - The browser (dashboard, settings) calls GET /api/alerts, the
- *     cancel endpoint, and /test-alert.
- *   - A contact's phone/browser calls GET /api/alerts/{id}/ack when they
- *     tap "Acknowledge" inside the push notification - that's why ack is
- *     a GET (so it works as a plain clickable link) and returns a small
- *     HTML page instead of JSON.
- */
 @RestController
 @RequestMapping("/api/alerts")
-@RequiredArgsConstructor
 public class AlertController {
 
     private final AlertService alertService;
 
+    public AlertController(AlertService alertService) {
+        this.alertService = alertService;
+    }
+
+    // Dashboard: alert history
     @GetMapping
-    public List<Alert> listAlerts() {
+    public List<Alert> list() {
         return alertService.listAll();
     }
 
-    /** Called by the analysis service when it detects a code word or a sustained stress signal. */
+    // Analysis service: "something is wrong, send an alert"
     @PostMapping
-    public ResponseEntity<Alert> createAlert(@Valid @RequestBody AlertRequest request) {
-        Alert alert = alertService.createAndDispatch(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(alert);
+    public ResponseEntity<Alert> create(@Valid @RequestBody AlertRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(alertService.create(request));
     }
 
-    /** Sends a real notification to every contact right now, so the team can demo delivery without faking a call. */
+    // Dashboard: "Send test alert" button
     @PostMapping("/test-alert")
-    public ResponseEntity<Alert> testAlert() {
-        return ResponseEntity.ok(alertService.createTestAlert());
+    public Alert testAlert() {
+        return alertService.createTestAlert();
     }
 
-    /** A contact taps "Acknowledge" in their ntfy notification - this is a GET so it works as a plain link. */
+    // The link inside the notification. It's a GET so tapping the link works.
     @GetMapping(value = "/{id}/ack", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> acknowledge(@PathVariable Long id) {
-        var updated = alertService.acknowledge(id);
-        String html = updated.isPresent()
-                ? "<html><body style='font-family:sans-serif;padding:2rem'><h2>Acknowledged.</h2>" +
-                  "<p>Alert #" + id + " has been marked as acknowledged. No further escalation will happen.</p></body></html>"
-                : "<html><body style='font-family:sans-serif;padding:2rem'><h2>Alert not found.</h2></body></html>";
-        return ResponseEntity.ok(html);
+    public String acknowledge(@PathVariable Long id) {
+        return alertService.acknowledge(id)
+                .map(alert -> "CANCELLED".equals(alert.getStatus())
+                        ? "<h2>Alert #" + id + " was a false alarm.</h2><p>No action needed.</p>"
+                        : "<h2>Thanks, alert #" + id + " is acknowledged.</h2><p>Other contacts will not be notified.</p>")
+                .orElse("<h2>Alert not found.</h2>");
     }
 
-    /** The user marks the most recent alert as a false alarm from the dashboard. */
+    // Dashboard "Mark false alarm" button, or the spoken cancel phrase
     @PostMapping("/{id}/cancel")
     public ResponseEntity<Alert> cancel(@PathVariable Long id) {
         return alertService.cancel(id)
                 .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.notFound().build());
     }
 }

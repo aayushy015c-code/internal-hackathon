@@ -3,63 +3,52 @@ package com.hackathon.distress.controller;
 import com.hackathon.distress.entity.AppConfig;
 import com.hackathon.distress.repository.AppConfigRepository;
 import com.hackathon.distress.service.AlertService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * ConfigController.java
- * -----------------------
- * The single AppConfig row: code words, sensitivity, baseline, disguise
- * settings, duress PIN, and the "analysis active" consent flag.
- *
- * This is the row the analysis service (FastAPI) reads on startup and
- * after calibration/settings changes - see analysis-service/config.py's
- * `refresh_from_core_api()`. Spring Boot is always the source of truth;
- * FastAPI just keeps a fast in-memory copy.
- */
+import java.util.List;
+
+// The user's settings (one row). The analysis service also reads this
+// so it knows the code words and sensitivity.
 @RestController
 @RequestMapping("/api/config")
-@RequiredArgsConstructor
 public class ConfigController {
 
-    private final AppConfigRepository appConfigRepository;
+    private final AppConfigRepository configRepo;
     private final AlertService alertService;
+
+    public ConfigController(AppConfigRepository configRepo, AlertService alertService) {
+        this.configRepo = configRepo;
+        this.alertService = alertService;
+    }
 
     @GetMapping
     public AppConfig get() {
         return alertService.getConfig();
     }
 
+    // Settings page "Save" button. The baseline is NOT changed here,
+    // only by calibration (see /baseline below).
     @PutMapping
-    public AppConfig update(@Valid @RequestBody AppConfig updated) {
-        AppConfig existing = alertService.getConfig();
-        existing.setCodeWords(updated.getCodeWords());
-        existing.setCancelCodeWord(updated.getCancelCodeWord());
-        existing.setSensitivity(updated.getSensitivity());
-        existing.setDisguiseEnabled(updated.isDisguiseEnabled());
-        existing.setDisguiseType(updated.getDisguiseType());
-        existing.setDuressPin(updated.getDuressPin());
-        existing.setAnalysisActive(updated.isAnalysisActive());
-        // Baseline is set separately by /calibrate on the analysis service (see below),
-        // but we still accept it here in case the frontend wants to clear/reset it.
-        if (updated.getBaselinePitchHz() != null) existing.setBaselinePitchHz(updated.getBaselinePitchHz());
-        if (updated.getBaselineRms() != null) existing.setBaselineRms(updated.getBaselineRms());
-        return appConfigRepository.save(existing);
+    public AppConfig update(@RequestBody AppConfig updated) {
+        AppConfig config = alertService.getConfig();
+        config.setCodeWords(updated.getCodeWords());
+        config.setCancelCodeWord(updated.getCancelCodeWord());
+        if (List.of("LOW", "MEDIUM", "HIGH").contains(updated.getSensitivity())) {
+            config.setSensitivity(updated.getSensitivity());
+        }
+        config.setDisguiseEnabled(updated.isDisguiseEnabled());
+        config.setDisguiseType(updated.getDisguiseType());
+        config.setDuressPin(updated.getDuressPin());
+        config.setAnalysisActive(updated.isAnalysisActive());
+        return configRepo.save(config);
     }
 
-    /**
-     * Called by the analysis service right after a successful /calibrate,
-     * so the baseline is persisted centrally instead of only living in
-     * FastAPI's memory (which would be lost on restart).
-     */
+    // Called by the analysis service after the user records their normal voice.
     @PutMapping("/baseline")
-    public AppConfig updateBaseline(@RequestBody BaselineUpdate baseline) {
-        AppConfig existing = alertService.getConfig();
-        existing.setBaselinePitchHz(baseline.baselinePitchHz());
-        existing.setBaselineRms(baseline.baselineRms());
-        return appConfigRepository.save(existing);
+    public AppConfig updateBaseline(@RequestBody AppConfig baseline) {
+        AppConfig config = alertService.getConfig();
+        config.setBaselinePitchHz(baseline.getBaselinePitchHz());
+        config.setBaselineRms(baseline.getBaselineRms());
+        return configRepo.save(config);
     }
-
-    public record BaselineUpdate(Double baselinePitchHz, Double baselineRms) {}
 }

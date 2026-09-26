@@ -5,14 +5,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-/**
- * HealthController.java
- * -----------------------
- * A trivial endpoint so anyone (a teammate, the Step 1 skeleton test, a
- * curl command) can check "is the core API even running?" without needing
- * to know about contacts or alerts yet. This is the very first thing to
- * check when something in the pipeline seems broken.
- */
+// Quick check that the server is running: http://localhost:8080/api/health
 @RestController
 public class HealthController {
 

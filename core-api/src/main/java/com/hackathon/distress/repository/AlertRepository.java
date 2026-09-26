@@ -6,16 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * AlertRepository.java
- * ---------------------
- * `findByStatusAndLastNotifiedAtBefore` powers the EscalationService: it
- * finds every still-PENDING alert whose last notification is older than
- * the escalation timeout, so we know who to re-notify.
- */
+// Spring writes the SQL for us based on the method names.
 public interface AlertRepository extends JpaRepository<Alert, Long> {
 
     List<Alert> findAllByOrderByCreatedAtDesc();
 
+    // alerts that are still waiting and were last sent before `cutoff`
     List<Alert> findByStatusAndLastNotifiedAtBefore(String status, Instant cutoff);
 }

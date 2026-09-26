@@ -1,67 +1,48 @@
 <!DOCTYPE html>
-<!--
-  index.html
-  ----------
-  The home screen: three links to the three real pages (/call, /dashboard,
-  /settings). Nothing clever here - this file exists so there's a sensible
-  thing to land on, and so the browser has one page to install as a PWA
-  (see manifest.json).
--->
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Home</title>
-  <link rel="manifest" href="manifest.json" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="css/styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Silent Signal</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center">
-  <main class="w-full max-w-sm px-6 flex flex-col gap-4">
-    <div class="text-center mb-4">
-      <h1 class="text-2xl font-semibold">Silent Signal</h1>
-      <p class="text-slate-400 text-sm mt-1">Quiet distress detection for phone calls.</p>
+<body>
+  <header><div class="container"><b>Silent Signal</b></div></header>
+
+  <div class="container">
+    <div class="box">
+      <p>Silent Signal listens to your side of a phone call and quietly alerts your trusted contacts if you say a secret code word or sound stressed.</p>
+      <p><a href="call.html">Start a call</a></p>
+      <p><a href="dashboard.html">Dashboard</a> (live scores and alert history)</p>
+      <p><a href="settings.html">Settings</a> (contacts, code words, calibration)</p>
+      <button id="install-btn" class="hidden">Install as an app</button>
     </div>
+    <p class="muted">Project for PSWB03: Non-Verbal Distress Detection via Voice Pattern Analysis.</p>
+  </div>
 
-    <a href="call.html" class="block bg-emerald-600 hover:bg-emerald-500 rounded-2xl px-5 py-4 text-center font-medium">
-      📞 Start a call
-    </a>
-    <a href="dashboard.html" class="block bg-slate-800 hover:bg-slate-700 rounded-2xl px-5 py-4 text-center font-medium">
-      📊 Dashboard
-    </a>
-    <a href="settings.html" class="block bg-slate-800 hover:bg-slate-700 rounded-2xl px-5 py-4 text-center font-medium">
-      ⚙️ Settings
-    </a>
-
-    <button id="install-btn" class="hidden mt-2 bg-slate-700 hover:bg-slate-600 rounded-2xl px-5 py-3 text-center text-sm">
-      Install as an app
-    </button>
-  </main>
-
+  <script src="js/api.js"></script>
   <script>
-    // PWA install prompt (Step 6) - Chrome fires this event when the manifest
-    // + service worker + HTTPS-or-localhost requirements are all met.
-    let deferredInstallPrompt = null;
-    const installBtn = document.getElementById("install-btn");
+    // If disguise mode is on, the home page opens the fake calculator/notes app instead.
+    Api.Config.get()
+      .then((config) => { if (config.disguiseEnabled) location.replace("disguise.html"); })
+      .catch(() => {});
 
-    window.addEventListener("beforeinstallprompt", (event) => {
-      event.preventDefault();
-      deferredInstallPrompt = event;
+    // "Install as an app" button (Chrome shows this event when the app can be installed)
+    let installPrompt = null;
+    const installBtn = document.getElementById("install-btn");
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      installPrompt = e;
       installBtn.classList.remove("hidden");
     });
-
-    installBtn.addEventListener("click", async () => {
-      if (!deferredInstallPrompt) return;
-      deferredInstallPrompt.prompt();
-      await deferredInstallPrompt.userChoice;
-      deferredInstallPrompt = null;
+    installBtn.addEventListener("click", () => {
+      installPrompt.prompt();
       installBtn.classList.add("hidden");
     });
 
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("service-worker.js").catch((err) => {
-        console.warn("Service worker registration failed (fine in plain HTTP dev servers):", err);
-      });
+      navigator.serviceWorker.register("service-worker.js");
     }
   </script>
 </body>

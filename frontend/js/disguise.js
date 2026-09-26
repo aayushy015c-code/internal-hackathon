@@ -1,198 +1,113 @@
-// disguise.js
-// -----------
-// Powers disguise.html: a real, working calculator or notes app, with one
-// hidden behavior - entering the configured duress PIN shows a fake, empty
-// dashboard instead of doing the normal thing.
+// The fake app: a calculator (or notes) that really works.
+// If someone types the duress PIN, we show a fake empty dashboard.
 
-const calculatorView = document.getElementById("calculator-view");
-const notesView = document.getElementById("notes-view");
-const decoyDashboardView = document.getElementById("decoy-dashboard-view");
-
+const el = (id) => document.getElementById(id);
 let duressPin = "0000";
-let activeDecoyType = "calculator"; // which screen to return to after the decoy dashboard
+let fakeApp = "calculator";
 
-async function init() {
-  try {
-    const config = await Api.Config.get();
+Api.Config.get()
+  .then((config) => {
     duressPin = config.duressPin || "0000";
     if (config.disguiseType === "notes") {
-      activeDecoyType = "notes";
-      calculatorView.classList.add("hidden");
-      notesView.classList.remove("hidden");
+      fakeApp = "notes";
+      showOnly("notes-view");
     }
-  } catch (err) {
-    // If the core API is unreachable, still show a convincing calculator -
-    // a decoy screen that visibly fails to load is not much of a decoy.
-    console.warn("[disguise] could not load config, defaulting to calculator:", err);
-  }
+  })
+  .catch(() => {}); // server down? still show the calculator, it must look normal
+
+function showOnly(id) {
+  ["calculator-view", "notes-view", "decoy-dashboard-view"].forEach((v) => el(v).classList.add("hidden"));
+  el(id).classList.remove("hidden");
 }
 
-function _showDecoyDashboard() {
-  calculatorView.classList.add("hidden");
-  notesView.classList.add("hidden");
-  decoyDashboardView.classList.remove("hidden");
+function showFakeDashboard() {
+  document.body.classList.remove("disguise-page");
+  showOnly("decoy-dashboard-view");
 }
 
-function _returnToDecoyScreen() {
-  decoyDashboardView.classList.add("hidden");
-  if (activeDecoyType === "notes") {
-    notesView.classList.remove("hidden");
-  } else {
-    calculatorView.classList.remove("hidden");
+// tap the title 3 times to go back to the calculator/notes
+let taps = 0;
+el("decoy-header").onclick = () => {
+  taps++;
+  setTimeout(() => (taps = 0), 1500);
+  if (taps >= 3) {
+    taps = 0;
+    document.body.classList.add("disguise-page");
+    showOnly(fakeApp === "notes" ? "notes-view" : "calculator-view");
   }
-}
-
-// Tapping the decoy dashboard's header 3 times lets the real owner get back
-// to the calculator/notes screen without it being an obvious "exit" button.
-let tapCount = 0;
-let tapResetTimer = null;
-document.getElementById("decoy-header").addEventListener("click", () => {
-  tapCount += 1;
-  clearTimeout(tapResetTimer);
-  tapResetTimer = setTimeout(() => (tapCount = 0), 1500);
-  if (tapCount >= 3) {
-    tapCount = 0;
-    _returnToDecoyScreen();
-  }
-});
+};
 
 // ---- Calculator ----
 
-const CALC_BUTTONS = [
-  "C", "±", "%", "÷",
-  "7", "8", "9", "×",
-  "4", "5", "6", "−",
-  "1", "2", "3", "+",
-  "0", ".", "=",
-];
+const buttons = ["C", "±", "%", "÷", "7", "8", "9", "×", "4", "5", "6", "−", "1", "2", "3", "+", "0", ".", "="];
+let display = "0";
+let first = null;    // first number
+let operator = null; // + − × ÷
+let newNumber = false;
 
-let displayValue = "0";
-let firstOperand = null;
-let pendingOperator = null;
-let awaitingSecondOperand = false;
-
-const displayEl = document.getElementById("calc-display");
-const buttonsEl = document.getElementById("calc-buttons");
-
-CALC_BUTTONS.forEach((label) => {
-  const btn = document.createElement("button");
-  btn.textContent = label;
-  btn.className =
-    "h-14 rounded-xl text-xl font-medium " +
-    (label === "="
-      ? "bg-amber-500 hover:bg-amber-400 col-span-1"
-      : "=+−×÷".includes(label)
-      ? "bg-slate-700 hover:bg-slate-600"
-      : "bg-slate-800 hover:bg-slate-700");
-  if (label === "0") btn.classList.add("col-span-2");
-  btn.addEventListener("click", () => _handleCalcButton(label));
-  buttonsEl.appendChild(btn);
+buttons.forEach((label) => {
+  const b = document.createElement("button");
+  b.textContent = label;
+  if ("÷×−+=".includes(label)) b.className = "op";
+  if (label === "0") b.className = "wide";
+  b.onclick = () => press(label);
+  el("calc-buttons").appendChild(b);
 });
 
-function _handleCalcButton(label) {
-  if (/\d/.test(label)) {
-    _inputDigit(label);
+function calculate(a, b, op) {
+  if (op === "+") return a + b;
+  if (op === "−") return a - b;
+  if (op === "×") return a * b;
+  if (op === "÷") return b === 0 ? 0 : a / b;
+  return b;
+}
+
+function press(label) {
+  if (/[0-9]/.test(label)) {
+    display = newNumber || display === "0" ? label : display + label;
+    newNumber = false;
   } else if (label === ".") {
-    _inputDecimal();
+    if (newNumber) { display = "0"; newNumber = false; }
+    if (!display.includes(".")) display += ".";
   } else if (label === "C") {
-    _clear();
+    display = "0"; first = null; operator = null; newNumber = false;
   } else if (label === "±") {
-    displayValue = String(parseFloat(displayValue) * -1);
+    display = String(-parseFloat(display));
   } else if (label === "%") {
-    displayValue = String(parseFloat(displayValue) / 100);
+    display = String(parseFloat(display) / 100);
   } else if (label === "=") {
-    _equals();
-    return; // _equals already re-renders (or redirects to the decoy dashboard)
+    // the secret: "=" on the duress PIN opens the fake dashboard
+    if (display === duressPin) {
+      display = "0";
+      el("calc-display").textContent = display;
+      showFakeDashboard();
+      return;
+    }
+    if (operator !== null) {
+      display = String(calculate(first, parseFloat(display), operator));
+      first = null; operator = null; newNumber = true;
+    }
   } else {
-    _inputOperator(label);
+    // + − × ÷
+    if (operator !== null && !newNumber) {
+      display = String(calculate(first, parseFloat(display), operator));
+    }
+    first = parseFloat(display);
+    operator = label;
+    newNumber = true;
   }
-  _render();
-}
-
-function _inputDigit(digit) {
-  if (awaitingSecondOperand) {
-    displayValue = digit;
-    awaitingSecondOperand = false;
-  } else {
-    displayValue = displayValue === "0" ? digit : displayValue + digit;
-  }
-}
-
-function _inputDecimal() {
-  if (awaitingSecondOperand) {
-    displayValue = "0.";
-    awaitingSecondOperand = false;
-    return;
-  }
-  if (!displayValue.includes(".")) displayValue += ".";
-}
-
-function _clear() {
-  displayValue = "0";
-  firstOperand = null;
-  pendingOperator = null;
-  awaitingSecondOperand = false;
-}
-
-function _inputOperator(operator) {
-  const inputValue = parseFloat(displayValue);
-  if (pendingOperator && awaitingSecondOperand) {
-    pendingOperator = operator;
-    return;
-  }
-  if (firstOperand === null) {
-    firstOperand = inputValue;
-  } else if (pendingOperator) {
-    firstOperand = _compute(firstOperand, inputValue, pendingOperator);
-    displayValue = String(firstOperand);
-  }
-  pendingOperator = operator;
-  awaitingSecondOperand = true;
-}
-
-function _compute(a, b, operator) {
-  switch (operator) {
-    case "+": return a + b;
-    case "−": return a - b;
-    case "×": return a * b;
-    case "÷": return b === 0 ? 0 : a / b;
-    default: return b;
-  }
-}
-
-function _equals() {
-  // The hidden trigger: if what's on the display right now is the duress
-  // PIN, don't calculate anything - show the decoy dashboard instead.
-  if (displayValue.trim() === duressPin.trim()) {
-    _showDecoyDashboard();
-    return;
-  }
-  if (pendingOperator && firstOperand !== null) {
-    displayValue = String(_compute(firstOperand, parseFloat(displayValue), pendingOperator));
-    firstOperand = null;
-    pendingOperator = null;
-    awaitingSecondOperand = false;
-  }
-  _render();
-}
-
-function _render() {
-  displayEl.textContent = displayValue;
+  el("calc-display").textContent = display;
 }
 
 // ---- Notes ----
 
-const NOTES_STORAGE_KEY = "silent-signal-decoy-notes";
-const notesTextarea = document.getElementById("notes-textarea");
-notesTextarea.value = localStorage.getItem(NOTES_STORAGE_KEY) || "";
-
-notesTextarea.addEventListener("input", () => {
-  localStorage.setItem(NOTES_STORAGE_KEY, notesTextarea.value);
-  // The hidden trigger for the notes decoy: type the duress PIN as the
-  // ENTIRE contents of the note.
-  if (notesTextarea.value.trim() === duressPin.trim()) {
-    _showDecoyDashboard();
+const notes = el("notes-textarea");
+notes.value = localStorage.getItem("decoy-notes") || "";
+notes.oninput = () => {
+  // the secret: a note that is exactly the duress PIN opens the fake dashboard
+  if (notes.value.trim() === duressPin) {
+    notes.value = ""; // don't leave the PIN sitting in the notes
+    showFakeDashboard();
   }
-});
-
-init();
+  localStorage.setItem("decoy-notes", notes.value);
+};

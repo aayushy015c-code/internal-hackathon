@@ -1,167 +1,139 @@
-// settings.js
-// -----------
-// Loads the current contacts + config from the core API when the page
-// opens, lets the user edit them, and saves changes back. After any config
-// save, we also call the analysis service's /reload-config so it picks up
-// the new code words/sensitivity immediately instead of waiting for a
-// restart.
+// Settings page: contacts, code words, sensitivity, calibration, disguise.
 
-let contactsCache = [];
+const el = (id) => document.getElementById(id);
+let contacts = [];
 
 // ---- Contacts ----
 
 async function loadContacts() {
-  contactsCache = await Api.Contacts.list();
-  _renderContacts();
-}
-
-function _renderContacts() {
-  const listEl = document.getElementById("contact-list");
-  if (contactsCache.length === 0) {
-    listEl.innerHTML = '<p class="text-slate-500">No contacts yet - add at least one below.</p>';
+  contacts = await Api.Contacts.list();
+  if (contacts.length === 0) {
+    el("contact-list").innerHTML = '<tr><td class="muted">No contacts yet. Add at least one.</td></tr>';
     return;
   }
-  listEl.innerHTML = contactsCache
-    .sort((a, b) => a.priorityOrder - b.priorityOrder)
-    .map(
-      (c) => `
-      <div class="flex items-center gap-2 bg-slate-900 rounded-lg px-3 py-2">
-        <input type="number" data-priority-id="${c.id}" value="${c.priorityOrder}" class="w-14 bg-slate-800 rounded px-2 py-1 text-xs" title="Priority (lower = notified first)" />
-        <div class="flex-1">
-          <p class="font-medium">${c.name}</p>
-          <p class="text-xs text-slate-500">topic: ${c.ntfyTopic}</p>
-        </div>
-        <button data-delete-id="${c.id}" class="text-red-400 hover:text-red-300 text-xs">Remove</button>
-      </div>
-    `
-    )
-    .join("");
-
-  listEl.querySelectorAll("[data-delete-id]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      await Api.Contacts.remove(btn.dataset.deleteId);
-      await loadContacts();
-    });
+  let html = "<tr><th>Order</th><th>Name</th><th>Topic</th><th></th></tr>";
+  contacts.forEach((c, i) => {
+    html += "<tr><td>" + (i + 1) + "</td>";
+    html += "<td>" + escapeHtml(c.name) + "</td>";
+    html += '<td class="muted">' + escapeHtml(c.ntfyTopic) + "</td>";
+    html += '<td><button onclick="moveContactUp(' + i + ')">Up</button> ';
+    html += '<button onclick="deleteContact(' + c.id + ')">Remove</button></td></tr>';
   });
-
-  listEl.querySelectorAll("[data-priority-id]").forEach((input) => {
-    input.addEventListener("change", async () => {
-      const contact = contactsCache.find((c) => String(c.id) === input.dataset.priorityId);
-      if (!contact) return;
-      contact.priorityOrder = Number(input.value);
-      await Api.Contacts.update(contact.id, contact);
-      await loadContacts();
-    });
-  });
+  el("contact-list").innerHTML = html;
 }
 
-document.getElementById("generate-topic-btn").addEventListener("click", () => {
-  // A long random string, not a guessable name - this is effectively the "password"
-  // that lets someone receive this contact's alerts (see NtfyService.java).
-  const random = crypto.getRandomValues(new Uint8Array(12));
-  const topic = "silent-signal-" + Array.from(random, (b) => b.toString(16).padStart(2, "0")).join("");
-  document.getElementById("new-contact-topic").value = topic;
-});
+async function deleteContact(id) {
+  await Api.Contacts.remove(id);
+  loadContacts();
+}
 
-document.getElementById("add-contact-btn").addEventListener("click", async () => {
-  const name = document.getElementById("new-contact-name").value.trim();
-  const topic = document.getElementById("new-contact-topic").value.trim();
+// swap a contact with the one above it
+async function moveContactUp(i) {
+  if (i === 0) return;
+  const a = contacts[i], b = contacts[i - 1];
+  await Api.Contacts.update(a.id, { ...a, priorityOrder: i - 1 });
+  await Api.Contacts.update(b.id, { ...b, priorityOrder: i });
+  loadContacts();
+}
+
+el("generate-topic-btn").onclick = () => {
+  // random topic, hard to guess
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  el("new-contact-topic").value = "silent-signal-" + Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+};
+
+el("add-contact-btn").onclick = async () => {
+  const name = el("new-contact-name").value.trim();
+  const topic = el("new-contact-topic").value.trim();
   if (!name || !topic) {
-    alert("Please enter both a name and an ntfy topic.");
+    alert("Please fill in the name and the topic.");
     return;
   }
-  const nextPriority = contactsCache.length; // append to the end of the escalation order
-  await Api.Contacts.create({ name, ntfyTopic: topic, priorityOrder: nextPriority });
-  document.getElementById("new-contact-name").value = "";
-  document.getElementById("new-contact-topic").value = "";
-  await loadContacts();
-});
+  // new contacts go to the end of the list
+  const lastOrder = contacts.length ? contacts[contacts.length - 1].priorityOrder : -1;
+  await Api.Contacts.create({ name: name, ntfyTopic: topic, priorityOrder: lastOrder + 1 });
+  el("new-contact-name").value = "";
+  el("new-contact-topic").value = "";
+  loadContacts();
+};
 
-// ---- Config (code words, sensitivity, disguise, duress, master switch) ----
+// ---- Settings ----
 
 async function loadConfig() {
-  const config = await Api.Config.get();
-  document.getElementById("code-words-input").value = config.codeWords || "";
-  document.getElementById("cancel-word-input").value = config.cancelCodeWord || "";
-  document.querySelector(`input[name="sensitivity"][value="${config.sensitivity}"]`)?.click();
-  document.getElementById("disguise-enabled").checked = !!config.disguiseEnabled;
-  document.getElementById("disguise-type").value = config.disguiseType || "calculator";
-  document.getElementById("duress-pin-input").value = config.duressPin || "";
-  document.getElementById("analysis-active-toggle").checked = config.analysisActive !== false;
-
-  const baselineStatus = document.getElementById("baseline-status");
-  baselineStatus.textContent =
-    config.baselinePitchHz != null
-      ? `Calibrated: ${config.baselinePitchHz.toFixed(1)} Hz baseline pitch.`
-      : "Not calibrated yet.";
+  const c = await Api.Config.get();
+  el("code-words-input").value = c.codeWords || "";
+  el("cancel-word-input").value = c.cancelCodeWord || "";
+  document.querySelector('input[name="sensitivity"][value="' + c.sensitivity + '"]').checked = true;
+  el("disguise-enabled").checked = c.disguiseEnabled;
+  el("disguise-type").value = c.disguiseType || "calculator";
+  el("duress-pin-input").value = c.duressPin || "";
+  el("analysis-active-toggle").checked = c.analysisActive;
+  el("baseline-status").textContent = c.baselinePitchHz
+    ? "Calibrated. Your normal pitch is " + c.baselinePitchHz.toFixed(0) + " Hz."
+    : "Not calibrated yet.";
 }
 
-document.getElementById("save-settings-btn").addEventListener("click", async () => {
-  const statusEl = document.getElementById("save-status");
-  statusEl.textContent = "Saving...";
+el("save-settings-btn").onclick = async () => {
+  el("save-status").textContent = "Saving...";
   try {
-    const sensitivity = document.querySelector('input[name="sensitivity"]:checked')?.value || "MEDIUM";
     await Api.Config.update({
-      codeWords: document.getElementById("code-words-input").value,
-      cancelCodeWord: document.getElementById("cancel-word-input").value,
-      sensitivity,
-      disguiseEnabled: document.getElementById("disguise-enabled").checked,
-      disguiseType: document.getElementById("disguise-type").value,
-      duressPin: document.getElementById("duress-pin-input").value,
-      analysisActive: document.getElementById("analysis-active-toggle").checked,
+      codeWords: el("code-words-input").value,
+      cancelCodeWord: el("cancel-word-input").value,
+      sensitivity: document.querySelector('input[name="sensitivity"]:checked').value,
+      disguiseEnabled: el("disguise-enabled").checked,
+      disguiseType: el("disguise-type").value,
+      duressPin: el("duress-pin-input").value,
+      analysisActive: el("analysis-active-toggle").checked,
     });
+    // tell the analysis service to pick up the new code words etc.
     await Api.Analysis.reloadConfig();
-    statusEl.textContent = `Saved at ${new Date().toLocaleTimeString()}.`;
+    el("save-status").textContent = "Saved.";
   } catch (err) {
-    statusEl.textContent = `Could not save: ${err.message}`;
+    el("save-status").textContent = "Could not save: " + err.message;
   }
-});
+};
 
-// ---- Calibration ----
+// ---- Calibration: record 10 seconds of normal talking ----
 
-document.getElementById("calibrate-btn").addEventListener("click", async () => {
-  const progressEl = document.getElementById("calibrate-progress");
-  const button = document.getElementById("calibrate-btn");
+el("calibrate-btn").onclick = async () => {
+  const button = el("calibrate-btn");
+  const progress = el("calibrate-progress");
   button.disabled = true;
-
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const recorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
-    const chunks = [];
-    recorder.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
-
-    const recordingDone = new Promise((resolve) => {
-      recorder.onstop = resolve;
-    });
+    const parts = [];
+    recorder.ondataavailable = (e) => parts.push(e.data);
+    const stopped = new Promise((resolve) => (recorder.onstop = resolve));
 
     recorder.start();
-    for (let secondsLeft = 10; secondsLeft > 0; secondsLeft--) {
-      progressEl.textContent = `Recording... please talk normally (${secondsLeft}s left)`;
+    for (let s = 10; s > 0; s--) {
+      progress.textContent = "Recording... talk normally (" + s + ")";
       await new Promise((r) => setTimeout(r, 1000));
     }
     recorder.stop();
-    await recordingDone;
+    await stopped;
     stream.getTracks().forEach((t) => t.stop());
 
-    progressEl.textContent = "Analyzing...";
-    const blob = new Blob(chunks, { type: "audio/webm" });
-    const result = await Api.Analysis.calibrate(blob);
-    progressEl.textContent = result.message;
-    await loadConfig();
+    progress.textContent = "Checking...";
+    const result = await Api.Analysis.calibrate(new Blob(parts, { type: "audio/webm" }));
+    progress.textContent = result.message;
+    loadConfig();
   } catch (err) {
-    progressEl.textContent = `Calibration failed: ${err.message}`;
-  } finally {
-    button.disabled = false;
+    progress.textContent = "Calibration failed: " + err.message;
   }
-});
+  button.disabled = false;
+};
 
-document.getElementById("demo-baseline-btn").addEventListener("click", async () => {
-  const result = await Api.Analysis.calibrateDemo();
-  document.getElementById("calibrate-progress").textContent = result.message;
-  await loadConfig();
-});
+el("demo-baseline-btn").onclick = async () => {
+  try {
+    const result = await Api.Analysis.calibrateDemo();
+    el("calibrate-progress").textContent = result.message;
+    loadConfig();
+  } catch (err) {
+    el("calibrate-progress").textContent = "Failed: " + err.message;
+  }
+};
 
-// ---- Init ----
-
-loadContacts();
-loadConfig();
+loadContacts().catch((err) => (el("contact-list").innerHTML = "<tr><td>Could not load contacts (is the core API running?)</td></tr>"));
+loadConfig().catch(() => {});
