@@ -101,3 +101,10 @@ td, th { text-align: left; padding: 6px 4px; border-bottom: 1px solid #eee; vert
 .notes { max-width: 420px; margin: 30px auto; padding: 0 16px; }
 .notes textarea { height: 320px; background: #1c1c1c; color: white; border-color: #333; }
 .decoy { max-width: 420px; margin: 30px auto; padding: 0 16px; color: #222; }
+
+/* small helpers (inline style="" is blocked by our Content-Security-Policy) */
+.inline { display: inline; }
+.mt { margin-top: 14px; }
+.spread { justify-content: space-between; }
+.danger-zone { border-color: #e6b0aa; }
+.notice li { margin-bottom: 6px; }

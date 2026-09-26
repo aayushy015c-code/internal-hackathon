@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; connect-src 'self' http://localhost:8080 http://localhost:8000 https://0.peerjs.com wss://0.peerjs.com; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Settings</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/styles.css">
@@ -16,31 +17,31 @@
   <div class="container">
     <div class="box">
       <h2>Trusted contacts</h2>
-      <p class="muted">Each contact installs the free <a href="https://ntfy.sh" target="_blank">ntfy</a> app and subscribes to their topic. The first contact is notified first; if they don't respond in 2 minutes, the next one is.</p>
+      <p class="muted">Each contact installs the free <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy</a> app and subscribes to their topic. The first contact is notified first; if they don't respond in 2 minutes, the next one is. Please tell them you've added them.</p>
       <table id="contact-list"></table>
       <label>Name</label>
-      <input type="text" id="new-contact-name">
+      <input type="text" id="new-contact-name" maxlength="100">
       <label>ntfy topic (works like a password, so make it random)</label>
       <div class="row">
-        <input type="text" id="new-contact-topic">
+        <input type="text" id="new-contact-topic" maxlength="64">
         <button id="generate-topic-btn">Generate</button>
       </div>
-      <p><button id="add-contact-btn" class="btn-primary">Add contact</button></p>
+      <p><button id="add-contact-btn" class="btn-primary">Add contact</button> <span id="contact-status" class="muted"></span></p>
     </div>
 
     <div class="box">
       <h2>Code words</h2>
       <label>Secret phrases that send an alert right away (separate with commas)</label>
-      <input type="text" id="code-words-input" placeholder="red umbrella, call my sister">
+      <input type="text" id="code-words-input" placeholder="red umbrella, call my sister" maxlength="1000">
       <label>Phrase that cancels the last alert</label>
-      <input type="text" id="cancel-word-input" placeholder="false alarm">
+      <input type="text" id="cancel-word-input" placeholder="false alarm" maxlength="100">
     </div>
 
     <div class="box">
       <h2>Sensitivity</h2>
-      <label style="display:inline"><input type="radio" name="sensitivity" value="LOW"> Low</label> &nbsp;
-      <label style="display:inline"><input type="radio" name="sensitivity" value="MEDIUM"> Medium</label> &nbsp;
-      <label style="display:inline"><input type="radio" name="sensitivity" value="HIGH"> High</label>
+      <label class="inline"><input type="radio" name="sensitivity" value="LOW"> Low</label> &nbsp;
+      <label class="inline"><input type="radio" name="sensitivity" value="MEDIUM"> Medium</label> &nbsp;
+      <label class="inline"><input type="radio" name="sensitivity" value="HIGH"> High</label>
       <p class="muted">High = alerts more easily (more false alarms). Low = only very clear stress.</p>
     </div>
 
@@ -61,20 +62,34 @@
         <option value="calculator">Calculator</option>
         <option value="notes">Notes</option>
       </select>
-      <label>Duress PIN (typing this in the fake app shows an empty, harmless dashboard)</label>
-      <input type="text" id="duress-pin-input" placeholder="0000">
+      <label>Duress PIN, 4 to 8 digits (typing this in the fake app shows an empty, harmless dashboard)</label>
+      <input type="password" id="duress-pin-input" inputmode="numeric" maxlength="8" autocomplete="new-password">
+      <p id="pin-status" class="muted"></p>
       <p><a href="disguise.html">Preview the fake app</a></p>
     </div>
 
     <div class="box">
-      <h2>Voice analysis</h2>
+      <h2>Voice analysis and location</h2>
       <label><input type="checkbox" id="analysis-active-toggle"> Allow voice analysis (turn off to stop all analysis)</label>
+      <label><input type="checkbox" id="share-location-toggle"> Include my location in alerts</label>
     </div>
 
     <p><button id="save-settings-btn" class="btn-primary">Save settings</button> <span id="save-status" class="muted"></span></p>
+
+    <div class="box danger-zone">
+      <h2>Your data</h2>
+      <p class="muted">Everything is stored on this computer only. Alerts are deleted automatically after 30 days.</p>
+      <p>
+        <button id="export-btn">Download my data</button>
+        <button id="withdraw-btn">Withdraw consent</button>
+        <button id="delete-all-btn" class="btn-red">Delete everything</button>
+      </p>
+      <p id="data-status" class="muted"></p>
+    </div>
   </div>
 
   <script src="js/api.js"></script>
+  <script src="js/consent-check.js"></script>
   <script src="js/settings.js"></script>
 </body>
 </html>

@@ -1,0 +1,15 @@
+# Dependabot opens a pull request when a library we use has an update or a security fix.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /core-api
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /analysis-service
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

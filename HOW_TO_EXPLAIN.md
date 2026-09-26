@@ -52,6 +52,18 @@ Disguise mode makes the app open as a working calculator. If someone forces you 
 **Is this AI?**
 Partly. Whisper, the speech-to-text part, is an AI model. The stress detection is simple rules on pitch, loudness and silence, not a trained model. That makes it easy to explain why an alert fired: every alert saves a plain-English reason, like "pitch +40%, loudness +90%".
 
+**Is it secure?**
+- Everything only listens on the laptop itself (127.0.0.1), so nobody on the Wi-Fi can reach it, and other websites are blocked.
+- The database is encrypted (AES). The duress PIN is stored as a hash and checked on the server.
+- The acknowledge link uses a random secret token.
+- Every page has a Content-Security-Policy.
+- GitHub checks every push: tests, CodeQL, secret scanning and vulnerable-library scanning.
+
+Details and known limitations are in SECURITY.md.
+
+**Does it follow the DPDP Act?**
+It's built with it in mind: a consent screen before any analysis, very little data kept, local processing, data deleted after 30 days, and "download my data", "delete everything" and "withdraw consent" buttons. See PRIVACY.md. Since it's a prototype, it would still need a legal review before real users.
+
 **What would you improve next?**
 Better stress detection with more signals (like breathing), and a one-tap silent alert from an iPhone shortcut or smartwatch.
 

@@ -3,3 +3,6 @@
 
 .DS_Store
 *.log
+
+# Release build output
+dist/

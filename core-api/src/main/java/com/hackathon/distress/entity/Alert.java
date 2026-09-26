@@ -1,5 +1,6 @@
 package com.hackathon.distress.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -38,6 +39,10 @@ public class Alert {
     private Integer escalationStage = 0;
 
     private Instant lastNotifiedAt;
+
+    // random secret in the "Acknowledge" link, so nobody can guess it from the alert number
+    @JsonIgnore
+    private String ackToken;
 
     // e.g. "Mom: sent; Dad: FAILED"
     @Column(length = 1000)
@@ -78,6 +83,9 @@ public class Alert {
 
     public Instant getLastNotifiedAt() { return lastNotifiedAt; }
     public void setLastNotifiedAt(Instant lastNotifiedAt) { this.lastNotifiedAt = lastNotifiedAt; }
+
+    public String getAckToken() { return ackToken; }
+    public void setAckToken(String ackToken) { this.ackToken = ackToken; }
 
     public String getDeliveryLog() { return deliveryLog; }
     public void setDeliveryLog(String deliveryLog) { this.deliveryLog = deliveryLog; }

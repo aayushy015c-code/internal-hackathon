@@ -99,6 +99,10 @@ el("copy-id-btn").onclick = () => navigator.clipboard.writeText(el("my-peer-id")
 // ---- Voice analysis ----
 
 async function startAnalysis() {
+  let shareLocation = false;
+  try {
+    shareLocation = (await Api.Config.get()).shareLocation;
+  } catch (err) {}
   Recorder.start(
     await getMic(),
     (result) => {
@@ -107,7 +111,8 @@ async function startAnalysis() {
       // the phone should only see a normal call. Results go to the dashboard.
       liveChannel.postMessage(result);
     },
-    (err) => (el("analysis-error").textContent = "Analysis problem: " + err.message)
+    (err) => (el("analysis-error").textContent = "Analysis problem: " + err.message),
+    shareLocation
   );
   el("analysis-dot").classList.add("on");
   el("analysis-label").textContent = "Voice analysis: on";

@@ -16,11 +16,17 @@ async function loadContacts() {
     html += "<tr><td>" + (i + 1) + "</td>";
     html += "<td>" + escapeHtml(c.name) + "</td>";
     html += '<td class="muted">' + escapeHtml(c.ntfyTopic) + "</td>";
-    html += '<td><button onclick="moveContactUp(' + i + ')">Up</button> ';
-    html += '<button onclick="deleteContact(' + c.id + ')">Remove</button></td></tr>';
+    html += '<td><button data-up="' + i + '">Up</button> ';
+    html += '<button data-delete="' + c.id + '">Remove</button></td></tr>';
   });
   el("contact-list").innerHTML = html;
 }
+
+// one click handler for all the Up / Remove buttons in the table
+el("contact-list").onclick = (e) => {
+  if (e.target.dataset.up) moveContactUp(Number(e.target.dataset.up));
+  if (e.target.dataset.delete) deleteContact(e.target.dataset.delete);
+};
 
 async function deleteContact(id) {
   await Api.Contacts.remove(id);
@@ -51,10 +57,15 @@ el("add-contact-btn").onclick = async () => {
   }
   // new contacts go to the end of the list
   const lastOrder = contacts.length ? contacts[contacts.length - 1].priorityOrder : -1;
-  await Api.Contacts.create({ name: name, ntfyTopic: topic, priorityOrder: lastOrder + 1 });
-  el("new-contact-name").value = "";
-  el("new-contact-topic").value = "";
-  loadContacts();
+  try {
+    await Api.Contacts.create({ name: name, ntfyTopic: topic, priorityOrder: lastOrder + 1 });
+    el("new-contact-name").value = "";
+    el("new-contact-topic").value = "";
+    el("contact-status").textContent = "";
+    loadContacts();
+  } catch (err) {
+    el("contact-status").textContent = "Could not add: " + err.message;
+  }
 };
 
 // ---- Settings ----
@@ -66,8 +77,10 @@ async function loadConfig() {
   document.querySelector('input[name="sensitivity"][value="' + c.sensitivity + '"]').checked = true;
   el("disguise-enabled").checked = c.disguiseEnabled;
   el("disguise-type").value = c.disguiseType || "calculator";
-  el("duress-pin-input").value = c.duressPin || "";
+  el("duress-pin-input").value = ""; // we never get the PIN back, only whether one is set
+  el("pin-status").textContent = c.duressPinSet ? "A PIN is set. Leave the box empty to keep it." : "No PIN set yet.";
   el("analysis-active-toggle").checked = c.analysisActive;
+  el("share-location-toggle").checked = c.shareLocation;
   el("baseline-status").textContent = c.baselinePitchHz
     ? "Calibrated. Your normal pitch is " + c.baselinePitchHz.toFixed(0) + " Hz."
     : "Not calibrated yet.";
@@ -84,7 +97,9 @@ el("save-settings-btn").onclick = async () => {
       disguiseType: el("disguise-type").value,
       duressPin: el("duress-pin-input").value,
       analysisActive: el("analysis-active-toggle").checked,
+      shareLocation: el("share-location-toggle").checked,
     });
+    loadConfig();
     // tell the analysis service to pick up the new code words etc.
     await Api.Analysis.reloadConfig();
     el("save-status").textContent = "Saved.";
@@ -132,6 +147,39 @@ el("demo-baseline-btn").onclick = async () => {
     loadConfig();
   } catch (err) {
     el("calibrate-progress").textContent = "Failed: " + err.message;
+  }
+};
+
+// ---- Your data (DPDP rights) ----
+
+el("export-btn").onclick = async () => {
+  try {
+    const data = await request(Api.MyData.exportUrl);
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "silent-signal-my-data.json";
+    link.click();
+  } catch (err) {
+    el("data-status").textContent = "Could not export: " + err.message;
+  }
+};
+
+el("withdraw-btn").onclick = async () => {
+  if (!confirm("Withdraw consent? Voice analysis will stop until you agree again.")) return;
+  await Api.Config.consent(false);
+  await Api.Analysis.reloadConfig().catch(() => {});
+  location.href = "consent.html";
+};
+
+el("delete-all-btn").onclick = async () => {
+  if (!confirm("Delete ALL contacts, settings and alerts? This can't be undone.")) return;
+  try {
+    await Api.MyData.deleteAll();
+    await Api.Analysis.reloadConfig().catch(() => {});
+    location.href = "consent.html";
+  } catch (err) {
+    el("data-status").textContent = "Could not delete: " + err.message;
   }
 };
 

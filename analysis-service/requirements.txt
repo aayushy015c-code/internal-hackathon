@@ -1,13 +1,17 @@
+# Needs Python 3.12 or newer.
+# Exact versions, so everyone (and GitHub Actions) installs the same thing.
+# Dependabot opens a pull request when a newer / patched version comes out.
+
 # Web server
-fastapi
-uvicorn[standard]
-python-multipart
-httpx
-python-dotenv
-numpy
+fastapi==0.141.1
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32
+httpx==0.28.1
+python-dotenv==1.2.3
+numpy==2.5.3
 
 # Audio + speech (not needed if STUB_MODE=true)
-av
-faster-whisper
-rapidfuzz
-librosa
+av==18.1.0
+faster-whisper==1.2.1
+rapidfuzz==3.14.6
+librosa==1.0.0

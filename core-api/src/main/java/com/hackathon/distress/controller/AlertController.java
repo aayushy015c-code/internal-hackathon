@@ -40,16 +40,17 @@ public class AlertController {
     }
 
     // The link inside the notification. It's a GET so tapping the link works.
-    @GetMapping(value = "/{id}/ack", produces = MediaType.TEXT_HTML_VALUE)
-    public String acknowledge(@PathVariable Long id) {
-        return alertService.acknowledge(id)
-                .map(alert -> "CANCELLED".equals(alert.getStatus())
-                        ? "<h2>Alert #" + id + " was a false alarm.</h2><p>No action needed.</p>"
-                        : "<h2>Thanks, alert #" + id + " is acknowledged.</h2><p>Other contacts will not be notified.</p>")
-                .orElse("<h2>Alert not found.</h2>");
+    // The token is random, so knowing the alert number isn't enough.
+    @GetMapping(value = "/ack/{token}", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<String> acknowledge(@PathVariable String token) {
+        return alertService.acknowledge(token)
+                .map(alert -> ResponseEntity.ok("CANCELLED".equals(alert.getStatus())
+                        ? "<h2>This alert was a false alarm.</h2><p>No action needed.</p>"
+                        : "<h2>Thanks, the alert is acknowledged.</h2><p>Other contacts will not be notified.</p>"))
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("<h2>Alert not found.</h2>"));
     }
 
-    // Dashboard "Mark false alarm" button, or the spoken cancel phrase
+    // Dashboard "False alarm" button, or the spoken cancel phrase
     @PostMapping("/{id}/cancel")
     public ResponseEntity<Alert> cancel(@PathVariable Long id) {
         return alertService.cancel(id)

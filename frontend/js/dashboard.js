@@ -57,8 +57,8 @@ async function loadAlerts() {
       html += "<td>" + escapeHtml(a.reasons);
       if (a.transcriptSnippet) html += '<br><span class="muted">"...' + escapeHtml(a.transcriptSnippet) + '"</span>';
       html += "</td>";
-      html += '<td class="status-' + a.status + '">' + a.status;
-      if (a.status === "PENDING") html += '<br><button onclick="cancelAlert(' + a.id + ', this)">False alarm</button>';
+      html += '<td class="status-' + escapeHtml(a.status) + '">' + escapeHtml(a.status);
+      if (a.status === "PENDING") html += '<br><button data-cancel="' + a.id + '">False alarm</button>';
       html += "</td></tr>";
     }
     el("alert-list").innerHTML = html + "</table>";
@@ -66,6 +66,11 @@ async function loadAlerts() {
     el("alert-list").textContent = "Could not load alerts (is the core API running?) " + err.message;
   }
 }
+
+// one click handler for all the "False alarm" buttons
+el("alert-list").onclick = (e) => {
+  if (e.target.dataset.cancel) cancelAlert(e.target.dataset.cancel, e.target);
+};
 
 async function cancelAlert(id, button) {
   button.disabled = true;

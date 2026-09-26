@@ -45,6 +45,17 @@ const Api = {
   Config: {
     get: () => request(CORE_API + "/api/config"),
     update: (config) => sendJson("PUT", CORE_API + "/api/config", config),
+    consent: (given) => sendJson("PUT", CORE_API + "/api/config/consent", { given: given }),
+  },
+
+  Disguise: {
+    info: () => request(CORE_API + "/api/disguise"),
+    checkPin: (pin) => sendJson("POST", CORE_API + "/api/disguise/check-pin", { pin: pin }),
+  },
+
+  MyData: {
+    exportUrl: CORE_API + "/api/data/export",
+    deleteAll: () => request(CORE_API + "/api/data", { method: "DELETE" }),
   },
 
   Alerts: {
@@ -64,6 +75,11 @@ const Api = {
         form.append("longitude", location.longitude);
       }
       return request(ANALYSIS_API + "/analyze", { method: "POST", body: form });
+    },
+    endSession: (sessionId) => {
+      const form = new FormData();
+      form.append("session_id", sessionId);
+      return request(ANALYSIS_API + "/end-session", { method: "POST", body: form });
     },
     calibrate: (blob) => {
       const form = new FormData();

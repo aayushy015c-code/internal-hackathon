@@ -1,6 +1,9 @@
 package com.hackathon.distress.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+
+import java.time.Instant;
 
 // The user's settings. There is only one user, so there is only one row (id = 1).
 @Entity
@@ -26,10 +29,23 @@ public class AppConfig {
 
     private boolean disguiseEnabled = false;
     private String disguiseType = "calculator"; // "calculator" or "notes"
-    private String duressPin = "0000";
+
+    // salted hash of the duress PIN, never the PIN itself, and never sent to the browser
+    @JsonIgnore
+    private String duressPinHash;
 
     // master on/off switch for voice analysis
     private boolean analysisActive = true;
+
+    // the user agreed to the privacy notice (consent.html). Nothing is analyzed without it.
+    private boolean consentGiven = false;
+    private Instant consentAt;
+
+    // include GPS location in alerts
+    private boolean shareLocation = true;
+
+    // so the settings page can show "PIN is set" without knowing the PIN
+    public boolean isDuressPinSet() { return duressPinHash != null; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -55,9 +71,18 @@ public class AppConfig {
     public String getDisguiseType() { return disguiseType; }
     public void setDisguiseType(String disguiseType) { this.disguiseType = disguiseType; }
 
-    public String getDuressPin() { return duressPin; }
-    public void setDuressPin(String duressPin) { this.duressPin = duressPin; }
+    public String getDuressPinHash() { return duressPinHash; }
+    public void setDuressPinHash(String duressPinHash) { this.duressPinHash = duressPinHash; }
 
     public boolean isAnalysisActive() { return analysisActive; }
     public void setAnalysisActive(boolean analysisActive) { this.analysisActive = analysisActive; }
+
+    public boolean isConsentGiven() { return consentGiven; }
+    public void setConsentGiven(boolean consentGiven) { this.consentGiven = consentGiven; }
+
+    public Instant getConsentAt() { return consentAt; }
+    public void setConsentAt(Instant consentAt) { this.consentAt = consentAt; }
+
+    public boolean isShareLocation() { return shareLocation; }
+    public void setShareLocation(boolean shareLocation) { this.shareLocation = shareLocation; }
 }

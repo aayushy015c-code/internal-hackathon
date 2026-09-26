@@ -1,0 +1,36 @@
+# CD: when you push a version tag (e.g. git tag v1.0.0 && git push --tags),
+# this builds the app and publishes a GitHub Release with ready-to-run files.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # needed to create the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Build and test core API
+        run: mvn -B -ntp verify
+        working-directory: core-api
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp core-api/target/core-api.jar dist/
+          cp core-api/.env.example dist/core-api.env.example
+          zip -r dist/frontend.zip frontend
+          zip -r dist/analysis-service.zip analysis-service -x "analysis-service/tests/*" "analysis-service/.venv/*"
+          cd dist && sha256sum * > SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
+          generate_release_notes: true

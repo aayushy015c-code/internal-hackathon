@@ -16,12 +16,26 @@ import config
 
 CODE_WORD_MATCH = 85  # how close the words must be (0-100), allows small mistakes
 COOLDOWN_SECONDS = 60
+FORGET_AFTER_SECONDS = 10 * 60  # forget a call's text/scores after 10 minutes without audio
 
-# one entry per call, keyed by session id
+# one entry per call, keyed by session id. Only in memory, never saved.
 sessions = {}
 
 
+def forget_old_sessions():
+    now = time.time()
+    for sid in list(sessions):
+        if now - sessions[sid]["last_seen"] > FORGET_AFTER_SECONDS:
+            del sessions[sid]
+
+
+def end_session(session_id):
+    """Call ended: throw away everything we kept about it."""
+    sessions.pop(session_id, None)
+
+
 def get_session(session_id):
+    forget_old_sessions()
     if session_id not in sessions:
         sessions[session_id] = {
             "texts": deque(maxlen=2),   # last 2 clips of text, so a phrase cut in half is still found
@@ -29,6 +43,7 @@ def get_session(session_id):
             "last_alert_time": 0,
             "last_alert_id": None,      # so the cancel phrase knows what to cancel
         }
+    sessions[session_id]["last_seen"] = time.time()
     return sessions[session_id]
 
 

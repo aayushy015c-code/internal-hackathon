@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; connect-src 'self' http://localhost:8080 http://localhost:8000 https://0.peerjs.com wss://0.peerjs.com; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Silent Signal</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/styles.css">
@@ -15,35 +16,14 @@
       <p>Silent Signal listens to your side of a phone call and quietly alerts your trusted contacts if you say a secret code word or sound stressed.</p>
       <p><a href="call.html">Start a call</a></p>
       <p><a href="dashboard.html">Dashboard</a> (live scores and alert history)</p>
-      <p><a href="settings.html">Settings</a> (contacts, code words, calibration)</p>
+      <p><a href="settings.html">Settings</a> (contacts, code words, calibration, your data)</p>
+      <p><a href="consent.html">Privacy notice</a></p>
       <button id="install-btn" class="hidden">Install as an app</button>
     </div>
     <p class="muted">Project for PSWB03: Non-Verbal Distress Detection via Voice Pattern Analysis.</p>
   </div>
 
   <script src="js/api.js"></script>
-  <script>
-    // If disguise mode is on, the home page opens the fake calculator/notes app instead.
-    Api.Config.get()
-      .then((config) => { if (config.disguiseEnabled) location.replace("disguise.html"); })
-      .catch(() => {});
-
-    // "Install as an app" button (Chrome shows this event when the app can be installed)
-    let installPrompt = null;
-    const installBtn = document.getElementById("install-btn");
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault();
-      installPrompt = e;
-      installBtn.classList.remove("hidden");
-    });
-    installBtn.addEventListener("click", () => {
-      installPrompt.prompt();
-      installBtn.classList.add("hidden");
-    });
-
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("service-worker.js");
-    }
-  </script>
+  <script src="js/home.js"></script>
 </body>
 </html>

@@ -3,6 +3,8 @@ package com.hackathon.distress.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 // A trusted person who gets alerts. Lower priorityOrder = notified first.
 // ntfyTopic is like a password: anyone who knows it can read the alerts.
@@ -15,9 +17,12 @@ public class Contact {
     private Long id;
 
     @NotBlank
+    @Size(max = 100)
     private String name;
 
+    // ntfy only allows letters, numbers, - and _ in topic names
     @NotBlank
+    @Pattern(regexp = "[A-Za-z0-9_-]{8,64}", message = "8-64 letters, numbers, - or _")
     private String ntfyTopic;
 
     @NotNull

@@ -25,6 +25,7 @@ settings = {
     "baseline_pitch": None,
     "baseline_rms": None,
     "analysis_active": True,
+    "consent_given": False,
 }
 
 
@@ -46,6 +47,7 @@ def load_from_core_api():
     settings["baseline_pitch"] = data.get("baselinePitchHz")
     settings["baseline_rms"] = data.get("baselineRms")
     settings["analysis_active"] = data.get("analysisActive", True)
+    settings["consent_given"] = data.get("consentGiven", False)
     return True
 
 

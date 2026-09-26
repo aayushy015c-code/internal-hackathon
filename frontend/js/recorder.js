@@ -14,25 +14,32 @@ const Recorder = {
   running: false,
   busy: false,
   location: { latitude: null, longitude: null },
+  watchId: null,
   onResult: null,
   onError: null,
 
-  start(stream, onResult, onError) {
+  start(stream, onResult, onError, shareLocation) {
     if (this.running) return;
     this.stream = stream;
     this.onResult = onResult;
     this.onError = onError;
     this.sessionId = crypto.randomUUID(); // one id per call
     this.running = true;
-    this.watchLocation();
+    if (shareLocation) this.watchLocation();
     this.recordClip();
   },
 
   stop() {
+    if (!this.running) return;
     this.running = false;
     if (this.recorder && this.recorder.state !== "inactive") {
       this.recorder.stop();
     }
+    if (this.watchId != null) navigator.geolocation.clearWatch(this.watchId);
+    this.watchId = null;
+    this.location = { latitude: null, longitude: null };
+    // tell the server to forget this call's text and scores
+    Api.Analysis.endSession(this.sessionId).catch(() => {});
   },
 
   recordClip() {
@@ -43,6 +50,7 @@ const Recorder = {
       if (e.data.size > 0) parts.push(e.data);
     };
     this.recorder.onstop = () => {
+      if (!this.running) return; // stopped by the user: don't send the last half clip
       this.sendClip(new Blob(parts, { type: "audio/webm" }));
       this.recordClip(); // start the next clip straight away
     };
@@ -67,7 +75,7 @@ const Recorder = {
   // location is optional, alerts still work without it
   watchLocation() {
     if (!navigator.geolocation) return;
-    navigator.geolocation.watchPosition(
+    this.watchId = navigator.geolocation.watchPosition(
       (pos) => {
         this.location.latitude = pos.coords.latitude;
         this.location.longitude = pos.coords.longitude;

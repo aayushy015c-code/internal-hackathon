@@ -2,39 +2,61 @@
 #
 #   GET  /health          is it running?
 #   POST /analyze         one 4 second audio clip in -> stress score out
+#   POST /end-session     call ended, forget everything about it
 #   POST /calibrate       ~10 seconds of normal talking -> saves your "normal voice"
 #   POST /calibrate/demo  use a made-up normal voice (for quick demos)
 #   POST /reload-config   re-read settings from the core API
 #
 # Try it in the browser: http://localhost:8000/docs
 import time
+from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
 
 import audio
 import config
 import scoring
 
 MAX_UPLOAD = 2 * 1024 * 1024  # 2MB, a 4s clip is usually under 100KB
+ALLOWED_ORIGINS = ["http://localhost:5500", "http://127.0.0.1:5500"]
 
-app = FastAPI(title="Silent Signal analysis service")
+@asynccontextmanager
+async def lifespan(app):
+    # runs once when the server starts
+    config.load_from_core_api()
+    if not config.STUB_MODE:
+        audio.load_whisper()  # load now so the first clip isn't slow
+    yield
+
+
+app = FastAPI(title="Silent Signal analysis service", lifespan=lifespan)
 
 # only our frontend is allowed to call this
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5500", "http://127.0.0.1:5500"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+# only answer when called as "localhost" (stops DNS rebinding attacks)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
 
 
-@app.on_event("startup")
-def startup():
-    config.load_from_core_api()
-    if not config.STUB_MODE:
-        audio.load_whisper()  # load now so the first clip isn't slow
+# CORS only stops other websites from READING our answers. A plain form
+# POST from another website would still run. So we block those here.
+@app.middleware("http")
+async def block_other_websites(request: Request, call_next):
+    origin = request.headers.get("origin")
+    if origin and origin not in ALLOWED_ORIGINS:
+        return JSONResponse({"detail": "Requests from other websites are not allowed."}, status_code=403)
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/health")
@@ -48,7 +70,7 @@ def reload_config():
 
 
 def read_upload(file: UploadFile):
-    data = file.file.read()
+    data = file.file.read(MAX_UPLOAD + 1)  # never read more than the limit into memory
     if len(data) > MAX_UPLOAD:
         raise HTTPException(413, "Audio clip too big")
     return data
@@ -58,13 +80,15 @@ def read_upload(file: UploadFile):
 # and would freeze the whole server if it ran inside an async function.
 @app.post("/analyze")
 def analyze(
-    session_id: str = Form(...),
+    session_id: str = Form(..., max_length=64),
     audio_file: UploadFile = File(..., alias="audio"),
-    latitude: float | None = Form(None),
-    longitude: float | None = Form(None),
+    latitude: float | None = Form(None, ge=-90, le=90),
+    longitude: float | None = Form(None, ge=-180, le=180),
     force_alert: bool = Form(False),
 ):
     start = time.time()
+    if not config.settings["consent_given"]:
+        raise HTTPException(403, "Please accept the privacy notice first (consent page).")
     if not config.settings["analysis_active"]:
         raise HTTPException(403, "Analysis is turned off in Settings.")
 
@@ -91,6 +115,12 @@ def analyze(
 
     result["processing_ms"] = int((time.time() - start) * 1000)
     return result
+
+
+@app.post("/end-session")
+def end_session(session_id: str = Form(..., max_length=64)):
+    scoring.end_session(session_id)
+    return {"ended": True}
 
 
 def send_alert(session_id, result, latitude, longitude):
@@ -122,6 +152,8 @@ def cancel_alert(alert_id):
 
 @app.post("/calibrate")
 def calibrate(audio_file: UploadFile = File(..., alias="audio")):
+    if not config.settings["consent_given"]:
+        raise HTTPException(403, "Please accept the privacy notice first (consent page).")
     data = read_upload(audio_file)
     if config.STUB_MODE:
         return use_baseline(150.0, 0.05, "Stub mode: saved a fake baseline.")

@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; connect-src 'self' http://localhost:8080 http://localhost:8000 https://0.peerjs.com wss://0.peerjs.com; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Call</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- integrity = hash of the exact file we tested. If the CDN ever serves something else, the browser refuses to run it. -->
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
 </head>
 <body>
   <header><div class="container">
@@ -18,7 +20,7 @@
     <div class="box call-status">
       <div id="call-status" class="big">Not connected</div>
       <div id="call-timer" class="muted hidden">00:00</div>
-      <div id="in-call-panel" class="call-buttons hidden" style="margin-top:14px">
+      <div id="in-call-panel" class="call-buttons mt hidden">
         <button id="mute-btn">Mute</button>
         <button id="hangup-btn" class="btn-red">Hang up</button>
       </div>
@@ -32,13 +34,13 @@
       </div>
       <label>Call someone using their ID</label>
       <div class="row">
-        <input type="text" id="remote-peer-id" placeholder="their ID">
+        <input type="text" id="remote-peer-id" placeholder="their ID" maxlength="64">
         <button id="call-btn" class="btn-primary">Call</button>
       </div>
     </div>
 
     <!-- The user must always be able to see if their voice is being analyzed, and stop it. -->
-    <div class="box row" style="justify-content:space-between">
+    <div class="box row spread">
       <span><span id="analysis-dot" class="dot"></span><span id="analysis-label">Voice analysis: off</span></span>
       <button id="analysis-toggle-btn">Start</button>
     </div>
@@ -48,6 +50,7 @@
   <audio id="remote-audio" autoplay></audio>
 
   <script src="js/api.js"></script>
+  <script src="js/consent-check.js"></script>
   <script src="js/recorder.js"></script>
   <script src="js/call.js"></script>
 </body>

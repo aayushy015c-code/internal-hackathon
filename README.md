@@ -6,6 +6,8 @@ Silent Signal listens to **your side** of a phone call. If you say a secret code
 
 All the audio processing happens on the laptop. Audio is never saved and never sent to the internet.
 
+Security and privacy: see [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md).
+
 ---
 
 ## How it works
@@ -63,15 +65,24 @@ After any alert there is a **60-second break**, so your contacts don't get spamm
 
 You need:
 - **Java 17 or newer** and **Maven**
-- **Python 3.10 or newer**
+- **Python 3.12 or newer**
 - **Google Chrome**
 
 On a Mac with Homebrew: `brew install openjdk maven python`
 
 ### 1. Core API (terminal 1)
 
+First time only: create `core-api/.env` with the database passwords (the database is encrypted with them).
+
 ```bash
 cd core-api
+cp .env.example .env
+```
+
+Open `core-api/.env` and replace both `change-me` passwords with long random text (no spaces). Keep a copy somewhere safe: if you lose them, the old database can't be opened. `.env` is never uploaded to GitHub.
+
+Then start it:
+```bash
 mvn spring-boot:run
 ```
 Wait until it says `Started DistressApplication`.
@@ -104,8 +115,9 @@ The first start downloads the Whisper speech model (about 150MB), so it needs in
 
 ```bash
 cd frontend
-python3 -m http.server 5500
+python3 -m http.server 5500 --bind 127.0.0.1
 ```
+(`--bind 127.0.0.1` means only this computer can open it, not others on your Wi-Fi.)
 
 Then open **http://localhost:5500** in Chrome.
 
@@ -115,6 +127,7 @@ Then open **http://localhost:5500** in Chrome.
 
 ## Try it (demo steps)
 
+0. The first time, you'll see the **privacy notice**. Tick "I agree" to continue. Nothing is analyzed until you do.
 1. **Settings:** add a contact. Click "Generate" to make a topic, then on your phone install the **ntfy** app and subscribe to that topic.
 2. **Settings:** add a code word (e.g. `red umbrella`), then click **Record 10 seconds** and talk normally. Save.
 3. **Dashboard:** click **Send test alert**. Your phone should get a notification.
@@ -124,7 +137,7 @@ Then open **http://localhost:5500** in Chrome.
 7. Or talk loudly in a high voice for about 15 seconds, which triggers a voice-change alert.
 8. Say "false alarm" to cancel it.
 
-**Disguise mode:** in Settings, turn on disguise mode and set a duress PIN. The home page now shows a calculator. Type the PIN and press `=` to see a fake "no alerts" screen. Tap its title 3 times to go back. You reach the real app by going straight to `call.html`, `dashboard.html` or `settings.html`.
+**Disguise mode:** in Settings, turn on disguise mode and set a duress PIN (4 to 8 digits). The home page now shows a calculator. Type the PIN and press `=` to see a fake "no alerts" screen. Tap its title 3 times to go back. You reach the real app by going straight to `call.html`, `dashboard.html` or `settings.html`.
 
 ---
 
@@ -143,6 +156,24 @@ Then open **http://localhost:5500** in Chrome.
 - [ ] "False alarm" button and the spoken cancel phrase both cancel the alert
 - [ ] Unticking "Allow voice analysis" in Settings stops analysis (call page shows an error)
 - [ ] Calculator works normally, and the duress PIN shows the fake dashboard
+- [ ] Settings → Download my data gives a JSON file; Delete everything clears it all
+
+### Automatic tests
+
+```bash
+cd core-api && mvn test                                   # Java: 12 tests
+cd analysis-service && pip install -r requirements-dev.txt && python -m pytest tests   # Python: 26 tests
+bash scripts/smoke_test.sh                                 # whole app + security checks (needs the jar built)
+```
+
+These also run on GitHub for every push (see `.github/workflows/`):
+
+| Workflow | What it does |
+|---|---|
+| **CI** | Java + Python tests, frontend checks, end-to-end smoke test, dependency vulnerability scan, secret scan |
+| **CodeQL** | GitHub's security scanner, on every push and weekly |
+| **Release** | Push a tag like `v1.0.0` and it builds the app and publishes a GitHub Release |
+| **Dependabot** | Opens a pull request when a library needs an update |
 
 ---
 
@@ -151,7 +182,9 @@ Then open **http://localhost:5500** in Chrome.
 ```
 frontend/
   index.html, call.html, dashboard.html, settings.html, disguise.html
+  consent.html          privacy notice, must be accepted first
   css/styles.css        one stylesheet for all pages
+  js/home.js, js/consent.js, js/consent-check.js
   js/api.js             every request to the two backends
   js/recorder.js        records the mic in 4-second clips
   js/call.js            the voice call (PeerJS)
@@ -165,12 +198,19 @@ analysis-service/
   audio.py       decode audio, speech-to-text, pitch/loudness/silence
   scoring.py     the scoring rules explained above
   config.py      settings loaded from the core API
+  tests/         pytest tests
 
 core-api/src/main/java/com/hackathon/distress/
-  controller/    the API endpoints (alerts, contacts, config, health)
-  service/       AlertService (alert logic + escalation), NtfyService (sends notifications)
+  controller/    the API endpoints (alerts, contacts, config, disguise, your data, health)
+  service/       AlertService (alert logic, escalation, auto-delete), NtfyService, PinService (hashes the PIN)
+  config/        CORS + LocalOnlyFilter (local-only access, security headers)
   entity/        the 3 database tables: Contact, AppConfig, Alert
   repository/    database access (Spring writes the SQL)
+core-api/src/test/   Java tests
+
+scripts/smoke_test.sh   starts everything and tests it end to end
+.github/                CI/CD workflows and Dependabot
+SECURITY.md, PRIVACY.md, LICENSE
 ```
 
 ---
@@ -182,10 +222,13 @@ core-api/src/main/java/com/hackathon/distress/
 | Dashboard says "Could not load alerts" | The core API isn't running (terminal 1) |
 | Call page shows "Analysis problem: Failed to fetch" | The analysis service isn't running (terminal 2) |
 | "403: Analysis is turned off" | Tick "Allow voice analysis" in Settings and save |
+| "403: Please accept the privacy notice" | Open `consent.html` and agree |
+| Core API won't start: "Wrong user name or password" or "Could not resolve placeholder DB_FILE_PASSWORD" | `core-api/.env` is missing or has different passwords from when the database was created. For a fresh start, delete `core-api/data/` |
+| Contacts don't get the "Acknowledge" link working | It needs a tunnel, see SECURITY.md |
 | Microphone doesn't work | Use Chrome and open the page on `localhost`, not your IP address |
 | Want to test without the heavy Python libraries | Put `STUB_MODE=true` in `analysis-service/.env` (returns fake scores) |
 | Port 5500 is taken | Use another port, and add it to `app.cors.allowed-origins` in `core-api/src/main/resources/application.properties` and `allow_origins` in `analysis-service/main.py` |
-| Want to see the database | Go to http://localhost:8080/h2-console (JDBC URL `jdbc:h2:file:./data/distressdb`, user `sa`, no password) |
+| Want to see the database | Set `spring.h2.console.enabled=true`, restart, open http://localhost:8080/h2-console. JDBC URL `jdbc:h2:file:./data/distressdb;CIPHER=AES`, user `sa`, password `<DB_FILE_PASSWORD> <DB_PASSWORD>` (with a space). Turn it off again after |
 
 ---
 

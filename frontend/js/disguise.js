@@ -1,19 +1,28 @@
 // The fake app: a calculator (or notes) that really works.
 // If someone types the duress PIN, we show a fake empty dashboard.
+// The PIN is checked by the server, so it's never inside this page.
 
 const el = (id) => document.getElementById(id);
-let duressPin = "0000";
 let fakeApp = "calculator";
 
-Api.Config.get()
-  .then((config) => {
-    duressPin = config.duressPin || "0000";
-    if (config.disguiseType === "notes") {
+Api.Disguise.info()
+  .then((d) => {
+    if (d.type === "notes") {
       fakeApp = "notes";
       showOnly("notes-view");
     }
   })
   .catch(() => {}); // server down? still show the calculator, it must look normal
+
+// only numbers that look like a PIN are sent to the server
+async function isDuressPin(text) {
+  if (!/^[0-9]{4,8}$/.test(text)) return false;
+  try {
+    return (await Api.Disguise.checkPin(text)).match;
+  } catch (err) {
+    return false;
+  }
+}
 
 function showOnly(id) {
   ["calculator-view", "notes-view", "decoy-dashboard-view"].forEach((v) => el(v).classList.add("hidden"));
@@ -62,7 +71,7 @@ function calculate(a, b, op) {
   return b;
 }
 
-function press(label) {
+async function press(label) {
   if (/[0-9]/.test(label)) {
     display = newNumber || display === "0" ? label : display + label;
     newNumber = false;
@@ -77,7 +86,7 @@ function press(label) {
     display = String(parseFloat(display) / 100);
   } else if (label === "=") {
     // the secret: "=" on the duress PIN opens the fake dashboard
-    if (display === duressPin) {
+    if (operator === null && (await isDuressPin(display))) {
       display = "0";
       el("calc-display").textContent = display;
       showFakeDashboard();
@@ -103,11 +112,12 @@ function press(label) {
 
 const notes = el("notes-textarea");
 notes.value = localStorage.getItem("decoy-notes") || "";
-notes.oninput = () => {
+notes.oninput = async () => {
+  localStorage.setItem("decoy-notes", notes.value);
   // the secret: a note that is exactly the duress PIN opens the fake dashboard
-  if (notes.value.trim() === duressPin) {
+  if (await isDuressPin(notes.value.trim())) {
     notes.value = ""; // don't leave the PIN sitting in the notes
+    localStorage.setItem("decoy-notes", "");
     showFakeDashboard();
   }
-  localStorage.setItem("decoy-notes", notes.value);
 };
