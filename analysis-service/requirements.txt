@@ -1,0 +1,13 @@
+# Web server
+fastapi
+uvicorn[standard]
+python-multipart
+httpx
+python-dotenv
+numpy
+
+# Audio + speech (not needed if STUB_MODE=true)
+av
+faster-whisper
+rapidfuzz
+librosa
