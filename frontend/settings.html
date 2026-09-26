@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header><div class="container">
+    <b>Silent Signal</b>
+    <nav><a href="index.html">Home</a><a href="call.html">Call</a><a href="dashboard.html">Dashboard</a></nav>
+  </div></header>
+
+  <div class="container">
+    <div class="box">
+      <h2>Trusted contacts</h2>
+      <p class="muted">Each contact installs the free <a href="https://ntfy.sh" target="_blank">ntfy</a> app and subscribes to their topic. The first contact is notified first; if they don't respond in 2 minutes, the next one is.</p>
+      <table id="contact-list"></table>
+      <label>Name</label>
+      <input type="text" id="new-contact-name">
+      <label>ntfy topic (works like a password, so make it random)</label>
+      <div class="row">
+        <input type="text" id="new-contact-topic">
+        <button id="generate-topic-btn">Generate</button>
+      </div>
+      <p><button id="add-contact-btn" class="btn-primary">Add contact</button></p>
+    </div>
+
+    <div class="box">
+      <h2>Code words</h2>
+      <label>Secret phrases that send an alert right away (separate with commas)</label>
+      <input type="text" id="code-words-input" placeholder="red umbrella, call my sister">
+      <label>Phrase that cancels the last alert</label>
+      <input type="text" id="cancel-word-input" placeholder="false alarm">
+    </div>
+
+    <div class="box">
+      <h2>Sensitivity</h2>
+      <label style="display:inline"><input type="radio" name="sensitivity" value="LOW"> Low</label> &nbsp;
+      <label style="display:inline"><input type="radio" name="sensitivity" value="MEDIUM"> Medium</label> &nbsp;
+      <label style="display:inline"><input type="radio" name="sensitivity" value="HIGH"> High</label>
+      <p class="muted">High = alerts more easily (more false alarms). Low = only very clear stress.</p>
+    </div>
+
+    <div class="box">
+      <h2>Voice calibration</h2>
+      <p class="muted">Talk normally for 10 seconds so the app knows what your normal voice sounds like.</p>
+      <p id="baseline-status">Not calibrated yet.</p>
+      <button id="calibrate-btn" class="btn-primary">Record 10 seconds</button>
+      <button id="demo-baseline-btn">Use demo values</button>
+      <p id="calibrate-progress" class="muted"></p>
+    </div>
+
+    <div class="box">
+      <h2>Disguise mode</h2>
+      <label><input type="checkbox" id="disguise-enabled"> Home page opens a fake app instead</label>
+      <label>Fake app</label>
+      <select id="disguise-type">
+        <option value="calculator">Calculator</option>
+        <option value="notes">Notes</option>
+      </select>
+      <label>Duress PIN (typing this in the fake app shows an empty, harmless dashboard)</label>
+      <input type="text" id="duress-pin-input" placeholder="0000">
+      <p><a href="disguise.html">Preview the fake app</a></p>
+    </div>
+
+    <div class="box">
+      <h2>Voice analysis</h2>
+      <label><input type="checkbox" id="analysis-active-toggle"> Allow voice analysis (turn off to stop all analysis)</label>
+    </div>
+
+    <p><button id="save-settings-btn" class="btn-primary">Save settings</button> <span id="save-status" class="muted"></span></p>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+</html>

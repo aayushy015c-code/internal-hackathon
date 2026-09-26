@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Call</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <header><div class="container">
+    <b>Silent Signal</b>
+    <nav><a href="index.html">Home</a><a href="dashboard.html" target="_blank">Dashboard</a><a href="settings.html">Settings</a></nav>
+  </div></header>
+
+  <div class="container">
+    <div class="box call-status">
+      <div id="call-status" class="big">Not connected</div>
+      <div id="call-timer" class="muted hidden">00:00</div>
+      <div id="in-call-panel" class="call-buttons hidden" style="margin-top:14px">
+        <button id="mute-btn">Mute</button>
+        <button id="hangup-btn" class="btn-red">Hang up</button>
+      </div>
+    </div>
+
+    <div id="setup-panel" class="box">
+      <label>Your ID (send this to the person who will call you)</label>
+      <div class="row">
+        <input type="text" id="my-peer-id" readonly placeholder="connecting...">
+        <button id="copy-id-btn">Copy</button>
+      </div>
+      <label>Call someone using their ID</label>
+      <div class="row">
+        <input type="text" id="remote-peer-id" placeholder="their ID">
+        <button id="call-btn" class="btn-primary">Call</button>
+      </div>
+    </div>
+
+    <!-- The user must always be able to see if their voice is being analyzed, and stop it. -->
+    <div class="box row" style="justify-content:space-between">
+      <span><span id="analysis-dot" class="dot"></span><span id="analysis-label">Voice analysis: off</span></span>
+      <button id="analysis-toggle-btn">Start</button>
+    </div>
+    <p id="analysis-error" class="muted"></p>
+  </div>
+
+  <audio id="remote-audio" autoplay></audio>
+
+  <script src="js/api.js"></script>
+  <script src="js/recorder.js"></script>
+  <script src="js/call.js"></script>
+</body>
+</html>

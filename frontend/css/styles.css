@@ -1,0 +1,103 @@
+/* One stylesheet for every page. Kept simple on purpose. */
+
+body {
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #f4f4f4;
+  color: #222;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+header {
+  background: #2c3e50;
+  color: white;
+  padding: 12px 16px;
+}
+header .container { padding: 0 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+header b { font-size: 18px; }
+header a { color: #dfe6ec; margin-left: 12px; text-decoration: none; }
+header a:hover { text-decoration: underline; }
+
+h2 { font-size: 17px; margin: 0 0 10px; }
+
+.box {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+label { display: block; font-size: 14px; margin: 10px 0 4px; }
+input[type="text"], input[type="number"], select, textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  font-size: 14px;
+}
+input[type="radio"], input[type="checkbox"] { margin-right: 4px; }
+
+button {
+  padding: 7px 14px;
+  border: 1px solid #999;
+  border-radius: 4px;
+  background: #eee;
+  font-size: 14px;
+  cursor: pointer;
+}
+button:hover { background: #e2e2e2; }
+button:disabled { opacity: 0.6; cursor: default; }
+.btn-primary { background: #2980b9; border-color: #2471a3; color: white; }
+.btn-primary:hover { background: #2471a3; }
+.btn-red { background: #c0392b; border-color: #a93226; color: white; }
+.btn-red:hover { background: #a93226; }
+
+.row { display: flex; gap: 8px; align-items: center; }
+.row input { flex: 1; }
+
+.muted { color: #777; font-size: 13px; }
+.hidden { display: none !important; }
+
+/* progress bars on the dashboard */
+.meter { background: #e5e5e5; height: 14px; border-radius: 3px; overflow: hidden; margin: 4px 0; }
+.meter div { height: 100%; width: 0; background: #27ae60; transition: width 0.3s; }
+.meter.big { height: 24px; }
+
+.alert-banner { background: #fdecea; border: 1px solid #e74c3c; color: #922b21; padding: 8px; border-radius: 4px; margin-top: 10px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+td, th { text-align: left; padding: 6px 4px; border-bottom: 1px solid #eee; vertical-align: top; }
+
+.status-PENDING { color: #c0392b; font-weight: bold; }
+.status-ACKNOWLEDGED { color: #27ae60; }
+.status-CANCELLED { color: #888; }
+
+/* the green/grey dot on the call page */
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #aaa; margin-right: 6px; }
+.dot.on { background: #27ae60; }
+
+/* call screen */
+.call-status { text-align: center; padding: 20px 0; }
+.call-status .big { font-size: 22px; }
+.call-buttons { text-align: center; }
+.call-buttons button { margin: 0 6px; }
+
+/* disguise page: calculator */
+.disguise-page { background: #111; color: white; }
+.calc { max-width: 280px; margin: 40px auto; }
+#calc-display { background: #222; font-size: 36px; text-align: right; padding: 16px 12px; border-radius: 6px; margin-bottom: 8px; overflow: hidden; font-variant-numeric: tabular-nums; }
+#calc-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+#calc-buttons button { height: 56px; font-size: 20px; background: #333; color: white; border: none; border-radius: 6px; }
+#calc-buttons button.op { background: #f39c12; }
+#calc-buttons button.wide { grid-column: span 2; }
+.notes { max-width: 420px; margin: 30px auto; padding: 0 16px; }
+.notes textarea { height: 320px; background: #1c1c1c; color: white; border-color: #333; }
+.decoy { max-width: 420px; margin: 30px auto; padding: 0 16px; color: #222; }

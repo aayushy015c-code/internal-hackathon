@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header><div class="container">
+    <b>Silent Signal</b>
+    <nav><a href="index.html">Home</a><a href="call.html">Call</a><a href="settings.html">Settings</a></nav>
+  </div></header>
+
+  <div class="container">
+    <p id="no-live-banner" class="muted">No call running. Start one on the <a href="call.html">Call page</a> in another tab and the scores will show up here.</p>
+
+    <div class="box">
+      <h2>Stress score (average of last 12 seconds)</h2>
+      <div class="meter big"><div id="rolling-bar"></div></div>
+      <b id="rolling-value">0</b> / 100 <span id="last-updated" class="muted"></span>
+      <div id="trigger-banner" class="alert-banner hidden"></div>
+    </div>
+
+    <div class="box">
+      <h2>What the app is hearing</h2>
+      Pitch <span id="pitch-value" class="muted">-</span>
+      <div class="meter"><div id="pitch-bar"></div></div>
+      Loudness <span id="energy-value" class="muted">-</span>
+      <div class="meter"><div id="energy-bar"></div></div>
+      Silence <span id="silence-value" class="muted">-</span>
+      <div class="meter"><div id="silence-bar"></div></div>
+      <p>Code word: <span id="codeword-value">not heard</span></p>
+    </div>
+
+    <div class="box">
+      <h2>Test</h2>
+      <p class="muted">Sends a real notification to your first contact.</p>
+      <button id="test-alert-btn">Send test alert</button>
+    </div>
+
+    <div class="box">
+      <h2>Alert history</h2>
+      <div id="alert-list">Loading...</div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

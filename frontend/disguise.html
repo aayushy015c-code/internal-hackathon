@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculator</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="disguise-page">
+  <!-- A working calculator / notes app. Typing the duress PIN shows the fake dashboard below. -->
+  <div id="calculator-view" class="calc">
+    <div id="calc-display">0</div>
+    <div id="calc-buttons"></div>
+  </div>
+
+  <div id="notes-view" class="notes hidden">
+    <h2>Notes</h2>
+    <textarea id="notes-textarea" placeholder="Start typing..."></textarea>
+  </div>
+
+  <!-- Fake "everything is fine" dashboard. Tap the title 3 times to go back. -->
+  <div id="decoy-dashboard-view" class="decoy hidden">
+    <div class="box">
+      <h2 id="decoy-header">Silent Signal</h2>
+      <p>No alerts.</p>
+      <p class="muted">No contacts added.</p>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/disguise.js"></script>
+</body>
+</html>
