@@ -21,7 +21,7 @@ users, that team is the "Data Fiduciary" and must add a contact person below.
 | Words you say (text) | Code word matching | In memory; last ~10 words saved with an alert | Memory: until the call ends (max 10 min idle). Alert: 30 days |
 | Voice pitch / loudness / pauses | Compare with your normal voice | In memory; your normal pitch/loudness saved in settings | Until you delete it |
 | Location (optional) | So contacts can find you | Saved with the alert; sent to contacts via ntfy.sh | 30 days (ntfy.sh keeps ~12 hours) |
-| Contacts' names and ntfy topics | Send alerts | Encrypted database on this computer | Until you delete them |
+| Contacts' names and ntfy topics | Send alerts | Database on this computer (encrypted fields) | Until you delete them |
 | Settings, duress PIN (hashed) | App settings | Encrypted database on this computer | Until you delete them |
 
 **Legal basis:** your consent (Section 6). Sending an alert in an emergency can also fall under
@@ -43,7 +43,7 @@ users, that team is the "Data Fiduciary" and must add a contact person below.
 | Complain | Grievance contact above, then the Data Protection Board of India |
 
 ## Security safeguards (Rule 6)
-Encryption at rest, local-only access, hashed PIN, audit log of important actions
+Encryption at rest (personal fields encrypted with AES-256-GCM before they reach the database), local-only access, database isolated from the internet in Docker, hashed PIN, audit log of important actions
 (consent, settings changes, alerts, deletions; no personal content in the log), automatic
 deletion. Details in [SECURITY.md](SECURITY.md).
 
@@ -59,4 +59,5 @@ deletion. Details in [SECURITY.md](SECURITY.md).
 - **ntfy.sh** (push notifications): receives alert text and location over HTTPS.
 - **PeerJS cloud server** (connects the call): sees peer IDs and IP addresses. Call audio itself is encrypted end-to-end by WebRTC.
 - **jsDelivr CDN**: serves the PeerJS library (checked with an integrity hash).
+- **Cloudflare** (only if you start the tunnel): carries the "Acknowledge" link request from the contact's phone. It sees the request, not your settings or alerts.
 - **Hugging Face**: the speech model is downloaded once. No user data is sent.

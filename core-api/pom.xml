@@ -43,6 +43,12 @@
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- PostgreSQL driver (used when running in Docker) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <!-- JUnit + MockMvc for the tests in src/test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

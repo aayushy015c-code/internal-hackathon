@@ -1,0 +1,96 @@
+# Runs the whole app with one command:  docker compose up --build
+# See DOCKER.md for a step-by-step guide.
+#
+#   db               PostgreSQL database (only reachable by core-api, not from your computer)
+#   core-api         Java API            -> http://localhost:8080
+#   analysis-service Python audio/AI     -> http://localhost:8000
+#   frontend         the web pages       -> http://localhost:5500   <- open this
+#   tunnel           (optional) public link so contacts can tap "Acknowledge":
+#                    docker compose --profile tunnel up --build
+#
+# Ports are published on 127.0.0.1 only, so other devices on your Wi-Fi can't connect.
+# Secrets come from the .env file next to this one (copy .env.example).
+
+name: silent-signal
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: silentsignal
+      POSTGRES_USER: silentsignal
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U silentsignal -d silentsignal"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  core-api:
+    build: ./core-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?Set DATA_ENCRYPTION_KEY in .env}
+      NTFY_TOKEN: ${NTFY_TOKEN:-}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      # the analysis service calls us as "core-api"
+      ALLOWED_HOSTS: localhost,127.0.0.1,core-api
+      # if the tunnel is running, the ack link uses its https address automatically
+      TUNNEL_METRICS_URL: http://tunnel:2000/quicktunnel
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks: [backend, default]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  analysis-service:
+    build: ./analysis-service
+    restart: unless-stopped
+    depends_on:
+      core-api:
+        condition: service_healthy
+    environment:
+      CORE_API_URL: http://core-api:8080
+      STUB_MODE: ${STUB_MODE:-false}
+    volumes:
+      - whisper-models:/models # the ~150MB speech model is downloaded once and kept here
+    ports:
+      - "127.0.0.1:8000:8000"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5500:8080"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  tunnel:
+    image: cloudflare/cloudflared:2026.9.3
+    profiles: [tunnel] # only starts with: docker compose --profile tunnel up
+    restart: unless-stopped
+    depends_on:
+      core-api:
+        condition: service_healthy
+    # Free "quick tunnel": gives a random https://....trycloudflare.com address that
+    # forwards to core-api. Only the ack link works through it (LocalOnlyFilter).
+    command: tunnel --no-autoupdate --metrics 0.0.0.0:2000 --url http://core-api:8080
+    security_opt: [no-new-privileges:true]
+
+networks:
+  backend:
+    internal: true # the database network has no internet access
+
+volumes:
+  db-data:
+  whisper-models:

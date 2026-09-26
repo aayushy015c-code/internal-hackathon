@@ -32,6 +32,7 @@ There are 3 parts, and each one runs in its own terminal:
 | Frontend | `frontend/` | HTML + JavaScript | 5500 | The pages you click on |
 | Analysis service | `analysis-service/` | Python (FastAPI) | 8000 | Listens to the audio and gives it a score |
 | Core API | `core-api/` | Java (Spring Boot) | 8080 | Stores data and sends notifications |
+| Database | (Docker: `db`) | PostgreSQL (Docker) or H2 file (without Docker) | - | Contacts, settings, alerts, with personal fields encrypted |
 
 ---
 
@@ -63,6 +64,30 @@ After any alert there is a **60-second break**, so your contacts don't get spamm
 
 ## Setup
 
+### Easiest: Docker (one command)
+
+Install Docker Desktop, then in this folder:
+
+```bash
+cp .env.example .env
+```
+
+Put a password and a key in `.env`: generate them with `openssl rand -hex 24` and `openssl rand -base64 32`. Then:
+
+```bash
+docker compose up --build
+```
+
+Open **http://localhost:5500**. That's it. Full beginner guide: **[DOCKER.md](DOCKER.md)**.
+
+To make the "Acknowledge" button work on contacts' phones, start with the tunnel. See **[TUNNEL.md](TUNNEL.md)**.
+
+```bash
+docker compose --profile tunnel up --build
+```
+
+### Without Docker (run each part yourself)
+
 You need:
 - **Java 17 or newer** and **Maven**
 - **Python 3.12 or newer**
@@ -72,14 +97,18 @@ On a Mac with Homebrew: `brew install openjdk maven python`
 
 ### 1. Core API (terminal 1)
 
-First time only: create `core-api/.env` with the database passwords (the database is encrypted with them).
+First time only: create `core-api/.env` with the database passwords and the encryption key.
 
 ```bash
 cd core-api
 cp .env.example .env
 ```
 
-Open `core-api/.env` and replace both `change-me` passwords with long random text (no spaces). Keep a copy somewhere safe: if you lose them, the old database can't be opened. `.env` is never uploaded to GitHub.
+Open `core-api/.env`:
+- Replace both `change-me` passwords with long random text (no spaces).
+- Set `DATA_ENCRYPTION_KEY` to the output of `openssl rand -base64 32`.
+
+Keep a copy somewhere safe: if you lose them, the saved data can't be opened. `.env` is never uploaded to GitHub.
 
 Then start it:
 ```bash
@@ -161,18 +190,19 @@ Then open **http://localhost:5500** in Chrome.
 ### Automatic tests
 
 ```bash
-cd core-api && mvn test                                   # Java: 12 tests
+cd core-api && mvn test                                   # Java: 18 tests
 cd analysis-service && pip install -r requirements-dev.txt && python -m pytest tests   # Python: 26 tests
 bash scripts/smoke_test.sh                                 # whole app + security checks (needs the jar built)
+MODE=docker bash scripts/smoke_test.sh                     # same checks against a fresh Docker stack (STUB_MODE=true)
 ```
 
 These also run on GitHub for every push (see `.github/workflows/`):
 
 | Workflow | What it does |
 |---|---|
-| **CI** | Java + Python tests, frontend checks, end-to-end smoke test, dependency vulnerability scan, secret scan |
+| **CI** | Java + Python tests, frontend checks, end-to-end smoke test, Docker + PostgreSQL stack test, image vulnerability scan (Trivy), dependency scan, secret scan |
 | **CodeQL** | GitHub's security scanner, on every push and weekly |
-| **Release** | Push a tag like `v1.0.0` and it builds the app and publishes a GitHub Release |
+| **Release** | Push a tag like `v1.0.0`: publishes Docker images to ghcr.io and a GitHub Release with the files |
 | **Dependabot** | Opens a pull request when a library needs an update |
 
 ---
@@ -203,14 +233,17 @@ analysis-service/
 core-api/src/main/java/com/hackathon/distress/
   controller/    the API endpoints (alerts, contacts, config, disguise, your data, health)
   service/       AlertService (alert logic, escalation, auto-delete), NtfyService, PinService (hashes the PIN)
-  config/        CORS + LocalOnlyFilter (local-only access, security headers)
+  config/        CORS, LocalOnlyFilter (local-only access, security headers), FieldEncryptor (encrypts personal columns)
   entity/        the 3 database tables: Contact, AppConfig, Alert
   repository/    database access (Spring writes the SQL)
 core-api/src/test/   Java tests
 
+docker-compose.yml      runs everything in Docker (+ PostgreSQL, + optional tunnel)
+*/Dockerfile            how each part's Docker image is built
+frontend/nginx.conf     web server + security headers (Docker)
 scripts/smoke_test.sh   starts everything and tests it end to end
 .github/                CI/CD workflows and Dependabot
-SECURITY.md, PRIVACY.md, LICENSE
+DOCKER.md, TUNNEL.md, SECURITY.md, PRIVACY.md, LICENSE
 ```
 
 ---
@@ -224,7 +257,8 @@ SECURITY.md, PRIVACY.md, LICENSE
 | "403: Analysis is turned off" | Tick "Allow voice analysis" in Settings and save |
 | "403: Please accept the privacy notice" | Open `consent.html` and agree |
 | Core API won't start: "Wrong user name or password" or "Could not resolve placeholder DB_FILE_PASSWORD" | `core-api/.env` is missing or has different passwords from when the database was created. For a fresh start, delete `core-api/data/` |
-| Contacts don't get the "Acknowledge" link working | It needs a tunnel, see SECURITY.md |
+| Contacts can't open the "Acknowledge" link | It needs a tunnel, see [TUNNEL.md](TUNNEL.md) |
+| Anything Docker | See the table at the end of [DOCKER.md](DOCKER.md) |
 | Microphone doesn't work | Use Chrome and open the page on `localhost`, not your IP address |
 | Want to test without the heavy Python libraries | Put `STUB_MODE=true` in `analysis-service/.env` (returns fake scores) |
 | Port 5500 is taken | Use another port, and add it to `app.cors.allowed-origins` in `core-api/src/main/resources/application.properties` and `allow_origins` in `analysis-service/main.py` |

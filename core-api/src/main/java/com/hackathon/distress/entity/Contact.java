@@ -1,5 +1,7 @@
 package com.hackathon.distress.entity;
 
+import com.hackathon.distress.config.EncryptedDouble;
+import com.hackathon.distress.config.FieldEncryptor;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -8,6 +10,7 @@ import jakarta.validation.constraints.Size;
 
 // A trusted person who gets alerts. Lower priorityOrder = notified first.
 // ntfyTopic is like a password: anyone who knows it can read the alerts.
+// Name and topic are encrypted in the database (FieldEncryptor).
 @Entity
 @Table(name = "contacts")
 public class Contact {
@@ -18,11 +21,15 @@ public class Contact {
 
     @NotBlank
     @Size(max = 100)
+    @Convert(converter = FieldEncryptor.class)
+    @Column(length = 1000)
     private String name;
 
     // ntfy only allows letters, numbers, - and _ in topic names
     @NotBlank
     @Pattern(regexp = "[A-Za-z0-9_-]{8,64}", message = "8-64 letters, numbers, - or _")
+    @Convert(converter = FieldEncryptor.class)
+    @Column(length = 500)
     private String ntfyTopic;
 
     @NotNull

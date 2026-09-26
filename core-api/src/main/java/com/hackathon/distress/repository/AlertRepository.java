@@ -17,7 +17,7 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
     // alerts that are still waiting and were last sent before `cutoff`
     List<Alert> findByStatusAndLastNotifiedAtBefore(String status, Instant cutoff);
 
-    Optional<Alert> findByAckToken(String ackToken);
+    Optional<Alert> findByAckTokenHash(String ackTokenHash);
 
     @Modifying
     @Query("delete from Alert a where a.createdAt < :cutoff")

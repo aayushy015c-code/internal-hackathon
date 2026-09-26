@@ -14,12 +14,21 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 // All the alert logic lives here:
 //   1. create an alert and notify the first contact
@@ -40,6 +49,10 @@ public class AlertService {
 
     @Value("${app.base-url}")
     private String baseUrl;
+
+    // cloudflared's "quick tunnel" info page, e.g. http://tunnel:2000/quicktunnel (empty = not used)
+    @Value("${app.tunnel-metrics-url:}")
+    private String tunnelMetricsUrl;
 
     @Value("${app.escalation.timeout-minutes}")
     private long timeoutMinutes;
@@ -66,7 +79,9 @@ public class AlertService {
             alert.setLatitude(req.latitude());
             alert.setLongitude(req.longitude());
         }
-        alert.setAckToken(HexFormat.of().formatHex(randomBytes(16)));
+        String token = HexFormat.of().formatHex(randomBytes(16));
+        alert.setAckToken(token);
+        alert.setAckTokenHash(sha256(token));
         alert = alertRepo.save(alert);
         audit.info("alert {} created ({})", alert.getId(), alert.getTriggerPath());
 
@@ -89,7 +104,7 @@ public class AlertService {
         }
 
         Contact contact = contacts.get(stage);
-        String ackUrl = baseUrl + "/api/alerts/ack/" + alert.getAckToken();
+        String ackUrl = publicBaseUrl() + "/api/alerts/ack/" + alert.getAckToken();
         String message = "Reason: " + alert.getReasons() + "\n";
         if (alert.getLatitude() != null && alert.getLongitude() != null) {
             message += "Location: https://maps.google.com/?q=" + alert.getLatitude() + "," + alert.getLongitude() + "\n";
@@ -130,7 +145,7 @@ public class AlertService {
 
     // A contact tapped the link in the notification.
     public Optional<Alert> acknowledge(String token) {
-        return alertRepo.findByAckToken(token).map(alert -> {
+        return alertRepo.findByAckTokenHash(sha256(token)).map(alert -> {
             if ("PENDING".equals(alert.getStatus())) {
                 alert.setStatus("ACKNOWLEDGED");
                 addToLog(alert, "acknowledged");
@@ -169,6 +184,36 @@ public class AlertService {
     // Get the settings row, creating it with default values the first time.
     public AppConfig getConfig() {
         return configRepo.findById(1L).orElseGet(() -> configRepo.save(new AppConfig()));
+    }
+
+    // The address contacts' phones use for the ack link.
+    // If a cloudflared quick tunnel is running, ask it for its current https address
+    // (it changes every time the tunnel restarts). Otherwise use app.base-url.
+    String publicBaseUrl() {
+        if (tunnelMetricsUrl != null && !tunnelMetricsUrl.isBlank()) {
+            try {
+                HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
+                HttpRequest request = HttpRequest.newBuilder(URI.create(tunnelMetricsUrl)).timeout(Duration.ofSeconds(2)).build();
+                String body = client.send(request, HttpResponse.BodyHandlers.ofString()).body();
+                // body looks like {"hostname":"something.trycloudflare.com"}
+                Matcher m = Pattern.compile("\"hostname\"\\s*:\\s*\"([a-z0-9.-]+)\"").matcher(body);
+                if (m.find() && !m.group(1).isEmpty()) {
+                    return "https://" + m.group(1);
+                }
+            } catch (Exception e) {
+                audit.warn("tunnel address not available, using {}", baseUrl);
+            }
+        }
+        return baseUrl;
+    }
+
+    private static String sha256(String text) {
+        try {
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private byte[] randomBytes(int n) {

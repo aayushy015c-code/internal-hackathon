@@ -1,6 +1,8 @@
 package com.hackathon.distress.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.hackathon.distress.config.EncryptedDouble;
+import com.hackathon.distress.config.FieldEncryptor;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -14,17 +16,23 @@ public class AppConfig {
     private Long id = 1L;
 
     // comma separated, e.g. "red umbrella,call my sister"
-    @Column(length = 1000)
+    @Convert(converter = FieldEncryptor.class)
+    @Column(length = 4000)
     private String codeWords = "";
 
     // saying this during a call cancels the last alert
+    @Convert(converter = FieldEncryptor.class)
+    @Column(length = 1000)
     private String cancelCodeWord = "false alarm";
 
     // LOW, MEDIUM or HIGH
     private String sensitivity = "MEDIUM";
 
     // the user's normal voice, set by calibration (null = not calibrated yet)
+    // (a voice pattern counts as sensitive/biometric data, so it's encrypted)
+    @Convert(converter = EncryptedDouble.class)
     private Double baselinePitchHz;
+    @Convert(converter = EncryptedDouble.class)
     private Double baselineRms;
 
     private boolean disguiseEnabled = false;

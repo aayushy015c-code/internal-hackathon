@@ -1,12 +1,15 @@
 package com.hackathon.distress.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.hackathon.distress.config.EncryptedDouble;
+import com.hackathon.distress.config.FieldEncryptor;
 import jakarta.persistence.*;
 
 import java.time.Instant;
 
 // One row per alert. We save WHY it fired (reasons) so the dashboard can explain it.
 // We only keep the last ~10 words of transcript, never the audio.
+// Personal fields are encrypted in the database (FieldEncryptor / EncryptedDouble).
 @Entity
 @Table(name = "alerts")
 public class Alert {
@@ -23,13 +26,17 @@ public class Alert {
     private Integer stressScore;
     private Integer rollingScore;
 
-    @Column(length = 2000)
+    @Convert(converter = FieldEncryptor.class)
+    @Column(length = 4000)
     private String reasons;
 
-    @Column(length = 500)
+    @Convert(converter = FieldEncryptor.class)
+    @Column(length = 2000)
     private String transcriptSnippet;
 
+    @Convert(converter = EncryptedDouble.class)
     private Double latitude;
+    @Convert(converter = EncryptedDouble.class)
     private Double longitude;
 
     // PENDING -> ACKNOWLEDGED or CANCELLED
@@ -41,11 +48,19 @@ public class Alert {
     private Instant lastNotifiedAt;
 
     // random secret in the "Acknowledge" link, so nobody can guess it from the alert number
+    // Stored encrypted (we need it again when escalating to the next contact),
+    // plus a SHA-256 hash of it so we can look it up when the link is tapped.
     @JsonIgnore
+    @Convert(converter = FieldEncryptor.class)
     private String ackToken;
 
+    @JsonIgnore
+    @Column(unique = true)
+    private String ackTokenHash;
+
     // e.g. "Mom: sent; Dad: FAILED"
-    @Column(length = 1000)
+    @Convert(converter = FieldEncryptor.class)
+    @Column(length = 4000)
     private String deliveryLog = "";
 
     public Long getId() { return id; }
@@ -86,6 +101,9 @@ public class Alert {
 
     public String getAckToken() { return ackToken; }
     public void setAckToken(String ackToken) { this.ackToken = ackToken; }
+
+    public String getAckTokenHash() { return ackTokenHash; }
+    public void setAckTokenHash(String ackTokenHash) { this.ackTokenHash = ackTokenHash; }
 
     public String getDeliveryLog() { return deliveryLog; }
     public void setDeliveryLog(String deliveryLog) { this.deliveryLog = deliveryLog; }

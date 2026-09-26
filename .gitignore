@@ -6,3 +6,4 @@
 
 # Release build output
 dist/
+.env
