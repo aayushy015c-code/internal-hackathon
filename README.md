@@ -1,5 +1,7 @@
 # Silent Signal
 
+[![CI](https://github.com/aayushy015c-code/internal-hackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/aayushy015c-code/internal-hackathon/actions/workflows/ci.yml) [![CodeQL](https://github.com/aayushy015c-code/internal-hackathon/actions/workflows/codeql.yml/badge.svg)](https://github.com/aayushy015c-code/internal-hackathon/actions/workflows/codeql.yml)
+
 **PSWB03: Non-Verbal Distress Detection via Voice Pattern Analysis**
 
 Silent Signal listens to **your side** of a phone call. If you say a secret code word, or your voice sounds stressed for a while, it quietly sends a push notification to people you trust. The person you're talking to sees nothing.
