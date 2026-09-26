@@ -7,7 +7,7 @@ COPY src ./src
 RUN mvn -q -B -DskipTests package
 
 # Step 2: a small image with only Java to run it (no Maven, no source code)
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:24-jre-alpine
 WORKDIR /app
 # don't run as root
 RUN addgroup -S app && adduser -S app -G app
