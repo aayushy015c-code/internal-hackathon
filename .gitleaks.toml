@@ -1,0 +1,16 @@
+# gitleaks settings (secret scanner that runs in CI).
+# Use all the normal rules, but ignore the fixed, fake keys used ONLY by the automated tests.
+# They are just "0123456789abcdef..." and "fedcba9876543210..." in Base64, not real secrets.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fake encryption keys used only in tests"
+regexTarget = "match"
+regexes = [
+  '''MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=''',
+  '''ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=''',
+  # gitleaks also decodes Base64, so allow the decoded fake values too
+  '''0123456789abcdef0123456789abcdef''',
+  '''fedcba9876543210fedcba9876543210''',
+]
