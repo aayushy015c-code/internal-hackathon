@@ -1,0 +1,5 @@
+# See also core-api/.gitignore and analysis-service/.gitignore for the
+# language-specific ignores - this file only covers things at the repo root.
+
+.DS_Store
+*.log

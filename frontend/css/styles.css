@@ -1,0 +1,25 @@
+/*
+  styles.css
+  ----------
+  Almost everything is done with Tailwind utility classes straight in the
+  HTML (loaded via CDN - see the <script src="https://cdn.tailwindcss.com">
+  tag on every page). This file only holds the handful of things that are
+  awkward to express as Tailwind classes.
+*/
+
+/* Smoother number transitions on the risk meter bars (dashboard.html). */
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Calculator display: keep the font monospaced-ish so digits don't jiggle. */
+#calc-display {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hide the number input's up/down spinners on the contact priority field
+   (settings.html) - they look out of place in a compact row. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.4;
+}

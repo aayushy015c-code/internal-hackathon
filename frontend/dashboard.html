@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<!--
+  dashboard.html
+  --------------
+  Live risk meter + per-signal meters (fed by call.html in real time, over
+  a same-origin BroadcastChannel - see js/dashboard.js) and the alert
+  history (fetched from the core API). Typically kept open in its own
+  browser tab alongside /call during a monitored conversation.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
+  <link rel="manifest" href="manifest.json" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-slate-900 text-white min-h-screen">
+
+  <nav class="w-full flex justify-between items-center px-4 py-3 text-sm text-slate-400 max-w-3xl mx-auto">
+    <a href="index.html" class="hover:text-white">&larr; Home</a>
+    <div class="flex gap-4">
+      <a href="call.html" class="hover:text-white">Call</a>
+      <a href="settings.html" class="hover:text-white">Settings</a>
+    </div>
+  </nav>
+
+  <main class="max-w-3xl mx-auto px-4 py-4 flex flex-col gap-6">
+
+    <section id="no-live-banner" class="bg-slate-800 rounded-xl px-4 py-3 text-sm text-slate-400">
+      No live call detected yet. Open <a href="call.html" class="underline">a call</a> in another tab to see live meters here.
+    </section>
+
+    <!-- Live risk meter -->
+    <section class="bg-slate-800 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-semibold">Live risk (rolling average)</h2>
+        <span id="last-updated" class="text-xs text-slate-500"></span>
+      </div>
+      <div class="w-full h-6 bg-slate-700 rounded-full overflow-hidden">
+        <div id="rolling-bar" class="h-full bg-emerald-500 transition-all duration-300" style="width:0%"></div>
+      </div>
+      <div class="flex justify-between text-xs text-slate-400 mt-1">
+        <span>0</span><span id="rolling-value">0</span><span>100</span>
+      </div>
+      <p id="trigger-banner" class="hidden mt-3 bg-red-600/20 border border-red-600 text-red-300 text-sm rounded-lg px-3 py-2"></p>
+    </section>
+
+    <!-- Per-signal explainability meters -->
+    <section class="bg-slate-800 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div>
+        <p class="text-xs uppercase text-slate-400 mb-1">Pitch deviation</p>
+        <div class="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+          <div id="pitch-bar" class="h-full bg-sky-400" style="width:0%"></div>
+        </div>
+        <p id="pitch-value" class="text-xs text-slate-400 mt-1">-</p>
+      </div>
+      <div>
+        <p class="text-xs uppercase text-slate-400 mb-1">Energy deviation</p>
+        <div class="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+          <div id="energy-bar" class="h-full bg-amber-400" style="width:0%"></div>
+        </div>
+        <p id="energy-value" class="text-xs text-slate-400 mt-1">-</p>
+      </div>
+      <div>
+        <p class="text-xs uppercase text-slate-400 mb-1">Silence ratio</p>
+        <div class="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+          <div id="silence-bar" class="h-full bg-fuchsia-400" style="width:0%"></div>
+        </div>
+        <p id="silence-value" class="text-xs text-slate-400 mt-1">-</p>
+      </div>
+      <div class="sm:col-span-3 text-xs text-slate-400">
+        Code word: <span id="codeword-value">not matched</span>
+      </div>
+    </section>
+
+    <!-- Manual test alert -->
+    <section class="bg-slate-800 rounded-2xl p-5 flex items-center justify-between">
+      <div>
+        <h2 class="font-semibold">Test the alert pipeline</h2>
+        <p class="text-xs text-slate-400">Sends a real notification to every configured contact right now.</p>
+      </div>
+      <button id="test-alert-btn" class="bg-amber-600 hover:bg-amber-500 rounded-lg px-4 py-2 text-sm font-medium">Send test alert</button>
+    </section>
+
+    <!-- Alert history -->
+    <section class="bg-slate-800 rounded-2xl p-5">
+      <h2 class="font-semibold mb-3">Alert history</h2>
+      <div id="alert-list" class="flex flex-col gap-2 text-sm">
+        <p class="text-slate-500">Loading...</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

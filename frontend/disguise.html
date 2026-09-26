@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!--
+  disguise.html
+  -------------
+  The decoy "front door" for when disguise mode is turned on in Settings.
+  It's a genuinely working calculator or notes app - not just a picture of
+  one - so it survives someone actually poking at it.
+
+  How the duress PIN works: type it in (as the calculator's number, or as
+  the entire contents of the notes app) and instead of doing normal
+  calculator/notes things, a fake, empty "SilentSignal" dashboard appears.
+  The idea is that if someone forces the real user to "prove" this is just
+  a calculator by unlocking it, the duress PIN satisfies them with a
+  dashboard that has nothing alarming on it - no contacts, no alert
+  history - rather than showing the real thing.
+
+  This page intentionally does NOT show the real dashboard/settings/call
+  screens - the actual owner reaches those the normal way (a saved
+  bookmark or typing the URL), not through this decoy at all.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-black text-white min-h-screen flex items-center justify-center">
+
+  <!-- Calculator view -->
+  <main id="calculator-view" class="w-full max-w-xs px-4">
+    <div id="calc-display" class="bg-slate-900 rounded-xl px-4 py-6 text-right text-4xl font-light mb-3 truncate">0</div>
+    <div class="grid grid-cols-4 gap-2" id="calc-buttons"></div>
+  </main>
+
+  <!-- Notes view -->
+  <main id="notes-view" class="w-full max-w-md px-4 hidden">
+    <h1 class="text-lg font-medium mb-2 text-slate-300">Notes</h1>
+    <textarea id="notes-textarea" class="w-full h-80 bg-slate-900 rounded-xl p-4 text-sm resize-none" placeholder="Start typing..."></textarea>
+  </main>
+
+  <!-- Decoy dashboard (shown after the duress PIN is entered) -->
+  <main id="decoy-dashboard-view" class="w-full max-w-md px-4 hidden">
+    <h1 id="decoy-header" class="text-xl font-semibold mb-4">Silent Signal</h1>
+    <div class="bg-slate-800 rounded-2xl p-5 text-center text-slate-400">
+      <p class="text-3xl mb-2">✅</p>
+      <p>No alerts. Everything looks fine.</p>
+    </div>
+    <div class="bg-slate-800 rounded-2xl p-5 mt-4 text-slate-400 text-sm">
+      <p>No contacts configured.</p>
+    </div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/disguise.js"></script>
+</body>
+</html>

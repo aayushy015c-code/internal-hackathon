@@ -1,0 +1,34 @@
+# requirements.txt - Python dependencies for the analysis service.
+#
+# Install with:  pip install -r requirements.txt   (see README for the
+# full Windows/macOS setup, including creating a virtual environment first).
+#
+# Versions are pinned so "it works on my machine" also works on your
+# teammates' machines. numpy is capped below 2.0 because faster-whisper's
+# underlying engine (ctranslate2) and some librosa builds are not yet
+# tested against numpy 2.x.
+#
+# These are grouped to match BUILD_ORDER.md. The code imports librosa/av/
+# faster-whisper/rapidfuzz lazily (inside the functions that use them), so
+# you can genuinely install just the "Step 1" group, get the skeleton
+# running end-to-end with STUB_MODE=true, and install the rest later when
+# you reach Step 3 - you don't have to wait ~150MB of model download and a
+# handful of heavier native packages before you see anything working.
+
+# --- Step 1: skeleton (STUB_MODE=true needs only this group) ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+httpx==0.27.2
+pydantic==2.9.2
+python-dotenv==1.0.1
+numpy==1.26.4
+
+# --- Step 3: real transcription + code-word matching ---
+av==13.1.0
+faster-whisper==1.0.3
+rapidfuzz==3.9.7
+
+# --- Step 4: librosa acoustic features + calibration ---
+librosa==0.10.2.post1
+soundfile==0.12.1

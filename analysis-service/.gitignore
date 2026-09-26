@@ -1,0 +1,12 @@
+# Virtual environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Local secrets/config override
+.env
+
+# faster-whisper's downloaded model cache (large; each teammate's machine
+# re-downloads it automatically on first run, ~150MB)
+.cache/

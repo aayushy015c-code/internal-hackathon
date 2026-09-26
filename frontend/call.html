@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!--
+  call.html
+  ---------
+  The screen the user is actually looking at during a real call. It looks
+  like a normal phone call screen on purpose - nothing here should look
+  like "distress detection software" to someone glancing at the phone.
+
+  Under the hood it does three things at once:
+    1. Makes a real voice call over WebRTC using PeerJS (a small library
+       that hides most of WebRTC's setup complexity behind ~10 lines of
+       code - see js/call.js).
+    2. Records the LOCAL microphone in 4-second chunks and ships each one
+       to the analysis service (js/recorder.js does this part).
+    3. Shows the required "analysis active" indicator and one-tap stop
+       button, so the user always has visible, obvious consent control
+       over whether their voice is being analyzed.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Call</title>
+  <link rel="manifest" href="manifest.json" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center">
+
+  <nav class="w-full max-w-md flex justify-between items-center px-4 py-3 text-sm text-slate-400">
+    <a href="index.html" class="hover:text-white">&larr; Home</a>
+    <div class="flex gap-4">
+      <a href="dashboard.html" target="_blank" class="hover:text-white">Live meters</a>
+      <a href="settings.html" class="hover:text-white">Settings</a>
+    </div>
+  </nav>
+
+  <main class="w-full max-w-md flex-1 flex flex-col items-center justify-center px-6 gap-6">
+
+    <!-- Phone-call-style avatar and status -->
+    <div class="flex flex-col items-center gap-3">
+      <div class="w-28 h-28 rounded-full bg-slate-700 flex items-center justify-center text-4xl">📞</div>
+      <p id="call-status" class="text-lg font-medium">Not connected</p>
+      <p id="call-timer" class="text-slate-400 text-sm hidden">00:00</p>
+    </div>
+
+    <!-- Your ID / connect form (shown before a call starts) -->
+    <div id="setup-panel" class="w-full bg-slate-800 rounded-2xl p-5 flex flex-col gap-4">
+      <div>
+        <label class="text-xs uppercase tracking-wide text-slate-400">Your ID (share this to be called)</label>
+        <div class="flex gap-2 mt-1">
+          <input id="my-peer-id" readonly class="flex-1 bg-slate-900 rounded-lg px-3 py-2 text-sm" />
+          <button id="copy-id-btn" class="bg-slate-700 hover:bg-slate-600 rounded-lg px-3 text-sm">Copy</button>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs uppercase tracking-wide text-slate-400">Call someone by their ID</label>
+        <div class="flex gap-2 mt-1">
+          <input id="remote-peer-id" placeholder="Enter their ID" class="flex-1 bg-slate-900 rounded-lg px-3 py-2 text-sm" />
+          <button id="call-btn" class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 text-sm font-medium">Call</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- In-call controls (shown once connected) -->
+    <div id="in-call-panel" class="w-full hidden flex-col items-center gap-4">
+      <div class="flex gap-4">
+        <button id="mute-btn" class="w-14 h-14 rounded-full bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-xl">🎤</button>
+        <button id="hangup-btn" class="w-14 h-14 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center text-xl">📵</button>
+      </div>
+    </div>
+
+    <!-- Required consent indicator: visible "analysis active" state + one-tap stop -->
+    <div class="w-full bg-slate-800/70 border border-slate-700 rounded-xl px-4 py-3 flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2">
+        <span id="analysis-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+        <span id="analysis-label">Voice analysis: off</span>
+      </div>
+      <button id="analysis-toggle-btn" class="text-emerald-400 hover:text-emerald-300 font-medium">Start</button>
+    </div>
+
+  </main>
+
+  <audio id="remote-audio" autoplay class="hidden"></audio>
+
+  <script src="js/api.js"></script>
+  <script src="js/recorder.js"></script>
+  <script src="js/call.js"></script>
+</body>
+</html>

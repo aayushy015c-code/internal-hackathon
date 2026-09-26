@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!--
+  settings.html
+  -------------
+  Everything the user configures once, ahead of time: trusted contacts,
+  code words, sensitivity, voice calibration, and the disguise/duress
+  privacy features. All of it is plain CRUD against the core API, wired up
+  in js/settings.js.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings</title>
+  <link rel="manifest" href="manifest.json" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-slate-900 text-white min-h-screen">
+
+  <nav class="w-full flex justify-between items-center px-4 py-3 text-sm text-slate-400 max-w-2xl mx-auto">
+    <a href="index.html" class="hover:text-white">&larr; Home</a>
+    <div class="flex gap-4">
+      <a href="call.html" class="hover:text-white">Call</a>
+      <a href="dashboard.html" class="hover:text-white">Dashboard</a>
+    </div>
+  </nav>
+
+  <main class="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-6">
+
+    <!-- Trusted contacts -->
+    <section class="bg-slate-800 rounded-2xl p-5">
+      <h2 class="font-semibold mb-3">Trusted contacts</h2>
+      <div id="contact-list" class="flex flex-col gap-2 mb-4 text-sm"></div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+        <input id="new-contact-name" placeholder="Name" class="bg-slate-900 rounded-lg px-3 py-2 text-sm sm:col-span-1" />
+        <input id="new-contact-topic" placeholder="ntfy topic (random string)" class="bg-slate-900 rounded-lg px-3 py-2 text-sm sm:col-span-2" />
+        <button id="generate-topic-btn" type="button" class="bg-slate-700 hover:bg-slate-600 rounded-lg px-2 text-xs">Generate</button>
+      </div>
+      <button id="add-contact-btn" class="mt-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 text-sm font-medium">Add contact</button>
+      <p class="text-xs text-slate-500 mt-2">
+        Contacts install the free <a class="underline" href="https://ntfy.sh" target="_blank">ntfy</a> app and subscribe to their topic to receive alerts.
+      </p>
+    </section>
+
+    <!-- Code words -->
+    <section class="bg-slate-800 rounded-2xl p-5">
+      <h2 class="font-semibold mb-3">Code words</h2>
+      <label class="text-xs uppercase tracking-wide text-slate-400">Distress phrases (comma-separated)</label>
+      <input id="code-words-input" placeholder="e.g. red umbrella, call my sister" class="w-full bg-slate-900 rounded-lg px-3 py-2 text-sm mt-1" />
+
+      <label class="text-xs uppercase tracking-wide text-slate-400 mt-4 block">Cancel / false-alarm phrase</label>
+      <input id="cancel-word-input" placeholder="e.g. false alarm" class="w-full bg-slate-900 rounded-lg px-3 py-2 text-sm mt-1" />
+    </section>
+
+    <!-- Sensitivity -->
+    <section class="bg-slate-800 rounded-2xl p-5">
+      <h2 class="font-semibold mb-3">Sensitivity</h2>
+      <div class="flex gap-3 text-sm">
+        <label class="flex items-center gap-1"><input type="radio" name="sensitivity" value="LOW" /> Low</label>
+        <label class="flex items-center gap-1"><input type="radio" name="sensitivity" value="MEDIUM" /> Medium</label>
+        <label class="flex items-center gap-1"><input type="radio" name="sensitivity" value="HIGH" /> High</label>
+      </div>
+      <p class="text-xs text-slate-500 mt-2">Higher sensitivity triggers non-verbal alerts more easily (more false positives, fewer missed events).</p>
+    </section>
+
+    <!-- Calibration -->
+    <section class="bg-slate-800 rounded-2xl p-5">
+      <h2 class="font-semibold mb-3">Voice calibration</h2>
+      <p id="baseline-status" class="text-sm text-slate-400 mb-3">Not calibrated yet.</p>
+      <div class="flex gap-2">
+        <button id="calibrate-btn" class="bg-sky-600 hover:bg-sky-500 rounded-lg px-4 py-2 text-sm font-medium">Record 10s baseline</button>
+        <button id="demo-baseline-btn" class="bg-slate-700 hover:bg-slate-600 rounded-lg px-4 py-2 text-sm">Use demo baseline</button>
+      </div>
+      <p id="calibrate-progress" class="text-xs text-slate-500 mt-2"></p>
+    </section>
+
+    <!-- Disguise & duress -->
+    <section class="bg-slate-800 rounded-2xl p-5">
+      <h2 class="font-semibold mb-3">Disguise &amp; duress</h2>
+      <label class="flex items-center gap-2 text-sm mb-3">
+        <input type="checkbox" id="disguise-enabled" /> Enable disguise mode (app opens as a decoy screen)
+      </label>
+      <label class="text-xs uppercase tracking-wide text-slate-400">Decoy screen</label>
+      <select id="disguise-type" class="w-full bg-slate-900 rounded-lg px-3 py-2 text-sm mt-1 mb-3">
+        <option value="calculator">Calculator</option>
+        <option value="notes">Notes</option>
+      </select>
+
+      <label class="text-xs uppercase tracking-wide text-slate-400">Duress PIN</label>
+      <input id="duress-pin-input" placeholder="0000" class="w-full bg-slate-900 rounded-lg px-3 py-2 text-sm mt-1" />
+      <p class="text-xs text-slate-500 mt-1">Entering this PIN on the decoy screen opens a fake, empty dashboard instead of the real one.</p>
+
+      <a href="disguise.html" class="inline-block mt-3 text-xs text-slate-400 underline">Preview decoy screen &rarr;</a>
+    </section>
+
+    <!-- Consent / kill switch -->
+    <section class="bg-slate-800 rounded-2xl p-5 flex items-center justify-between">
+      <div>
+        <h2 class="font-semibold">Analysis enabled</h2>
+        <p class="text-xs text-slate-400">Master switch. When off, the analysis service refuses to process any audio at all.</p>
+      </div>
+      <label class="inline-flex items-center cursor-pointer">
+        <input type="checkbox" id="analysis-active-toggle" class="sr-only peer" />
+        <div class="w-11 h-6 bg-slate-600 rounded-full peer peer-checked:bg-emerald-500 relative transition-colors">
+          <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+        </div>
+      </label>
+    </section>
+
+    <button id="save-settings-btn" class="bg-emerald-600 hover:bg-emerald-500 rounded-2xl px-5 py-3 font-medium">Save settings</button>
+    <p id="save-status" class="text-sm text-center text-slate-400"></p>
+
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+</html>

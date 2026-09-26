@@ -1,0 +1,13 @@
+# Build output
+target/
+
+# The H2 database file(s) - local dev data, never commit real alert/contact data
+data/
+
+# Local secrets override (if you add one)
+.env
+
+# IDE
+.idea/
+*.iml
+.vscode/
