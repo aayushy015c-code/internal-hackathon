@@ -8,7 +8,7 @@ let contacts = [];
 async function loadContacts() {
   contacts = await Api.Contacts.list();
   if (contacts.length === 0) {
-    el("contact-list").innerHTML = '<tr><td class="muted">No contacts yet. Add at least one.</td></tr>';
+    el("contact-list").innerHTML = '<tr><td class="muted">No contacts yet. Add at least one person below.</td></tr>';
     return;
   }
   let html = "<tr><th>Order</th><th>Name</th><th>Topic</th><th></th></tr>";
@@ -16,8 +16,8 @@ async function loadContacts() {
     html += "<tr><td>" + (i + 1) + "</td>";
     html += "<td>" + escapeHtml(c.name) + "</td>";
     html += '<td class="muted">' + escapeHtml(c.ntfyTopic) + "</td>";
-    html += '<td><button data-up="' + i + '">Up</button> ';
-    html += '<button data-delete="' + c.id + '">Remove</button></td></tr>';
+    html += '<td><button class="btn-small" data-up="' + i + '"' + (i === 0 ? " disabled" : "") + '>Up</button> ';
+    html += '<button class="btn-small" data-delete="' + c.id + '">Remove</button></td></tr>';
   });
   el("contact-list").innerHTML = html;
 }

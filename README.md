@@ -38,6 +38,21 @@ There are 3 parts, and each one runs in its own terminal:
 
 ---
 
+## How it looks
+
+The interface uses six colours only (a CI check fails if any other colour appears in the frontend):
+
+| Colour | Hex | Used for (60 / 30 / 10 rule) |
+|---|---|---|
+| Bone | `#E6E0D6` | 60%: page background (light mode) |
+| Navy | `#1C2430` | 30%: header, headings, main buttons, main panels |
+| Oxblood | `#4B1E23` | 10%: only danger and alerts (pending alert, high stress, hang up, delete) |
+| Olive | `#6B6F4E` | safe / on / acknowledged, dividers |
+| Bronze | `#8A5A2B` | medium / warning, helper text, focus |
+| Ink | `#121212` | text, and the background in dark mode |
+
+It follows your system's light or dark mode, respects "reduce motion", and every text colour passes WCAG AA contrast. Details are at the top of `frontend/css/styles.css`.
+
 ## How it decides to send an alert
 
 There are two ways an alert can be triggered:
