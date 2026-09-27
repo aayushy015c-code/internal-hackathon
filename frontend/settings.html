@@ -4,92 +4,143 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; connect-src 'self' http://localhost:8080 http://localhost:8000 https://0.peerjs.com wss://0.peerjs.com; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="theme-color" content="#1C2430">
   <title>Settings</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=3">
 </head>
 <body>
   <header><div class="container">
     <b>Silent Signal</b>
-    <nav><a href="index.html">Home</a><a href="call.html">Call</a><a href="dashboard.html">Dashboard</a></nav>
+    <nav aria-label="Main"><a href="index.html">Home</a><a href="call.html">Call</a><a href="dashboard.html">Dashboard</a><a href="settings.html" aria-current="page">Settings</a></nav>
   </div></header>
 
-  <div class="container">
-    <div class="box">
-      <h2>Trusted contacts</h2>
-      <p class="muted">Each contact installs the free <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy</a> app and subscribes to their topic. The first contact is notified first; if they don't respond in 2 minutes, the next one is. Please tell them you've added them.</p>
-      <table id="contact-list"></table>
-      <label>Name</label>
-      <input type="text" id="new-contact-name" maxlength="100">
-      <label>ntfy topic (works like a password, so make it random)</label>
-      <div class="row">
-        <input type="text" id="new-contact-topic" maxlength="64">
-        <button id="generate-topic-btn">Generate</button>
+  <main class="container">
+    <div class="page-head">
+      <h1>Settings</h1>
+      <p>Everything here is stored on this computer only.</p>
+    </div>
+
+    <section class="section grid-form">
+      <h2>Your identity</h2>
+      <div>
+        <label for="my-call-id">Your call ID (people type this to call you, it never changes)</label>
+        <div class="row">
+          <input type="text" id="my-call-id" readonly placeholder="Loading...">
+          <button id="copy-call-id-btn">Copy</button>
+        </div>
+        <label for="my-access-key">Your access key (secret, treat it like a password)</label>
+        <div class="row">
+          <input type="password" id="my-access-key" readonly autocomplete="off">
+          <button id="show-key-btn">Show</button>
+          <button id="copy-key-btn">Copy</button>
+        </div>
+        <p class="muted mt">To use the same call ID, contacts and settings in another browser, paste this key there below.</p>
+        <label for="sign-in-key">Use an existing identity on this browser</label>
+        <div class="row">
+          <input type="password" id="sign-in-key" placeholder="Paste an access key" autocomplete="off">
+          <button id="sign-in-btn">Use this key</button>
+        </div>
+        <p id="identity-status" class="muted mt" role="status"></p>
       </div>
-      <p><button id="add-contact-btn" class="btn-primary">Add contact</button> <span id="contact-status" class="muted"></span></p>
-    </div>
+    </section>
 
-    <div class="box">
+    <section class="section grid-form">
+      <h2>Trusted contacts</h2>
+      <div>
+        <p class="muted">Each contact installs the free <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy</a> app and subscribes to their topic. The first contact is alerted first. If they don't respond in 2 minutes, the next one is. Please tell them you've added them.</p>
+        <table id="contact-list"></table>
+        <label for="new-contact-name">Name</label>
+        <input type="text" id="new-contact-name" maxlength="100">
+        <label for="new-contact-topic">ntfy topic (works like a password, so make it random)</label>
+        <div class="row">
+          <input type="text" id="new-contact-topic" maxlength="64">
+          <button id="generate-topic-btn">Generate</button>
+        </div>
+        <p class="mt"><button id="add-contact-btn" class="btn-primary">Add contact</button> <span id="contact-status" class="muted" role="status"></span></p>
+      </div>
+    </section>
+
+    <section class="section grid-form">
       <h2>Code words</h2>
-      <label>Secret phrases that send an alert right away (separate with commas)</label>
-      <input type="text" id="code-words-input" placeholder="red umbrella, call my sister" maxlength="1000">
-      <label>Phrase that cancels the last alert</label>
-      <input type="text" id="cancel-word-input" placeholder="false alarm" maxlength="100">
-    </div>
+      <div>
+        <label for="code-words-input">Secret phrases that send an alert right away (separate with commas)</label>
+        <input type="text" id="code-words-input" placeholder="red umbrella, call my sister" maxlength="1000">
+        <label for="cancel-word-input">Phrase that cancels the last alert</label>
+        <input type="text" id="cancel-word-input" placeholder="false alarm" maxlength="100">
+      </div>
+    </section>
 
-    <div class="box">
+    <section class="section grid-form">
       <h2>Sensitivity</h2>
-      <label class="inline"><input type="radio" name="sensitivity" value="LOW"> Low</label> &nbsp;
-      <label class="inline"><input type="radio" name="sensitivity" value="MEDIUM"> Medium</label> &nbsp;
-      <label class="inline"><input type="radio" name="sensitivity" value="HIGH"> High</label>
-      <p class="muted">High = alerts more easily (more false alarms). Low = only very clear stress.</p>
-    </div>
+      <div>
+        <div class="radio-group" role="radiogroup" aria-label="Sensitivity">
+          <label><input type="radio" name="sensitivity" value="LOW"> Low</label>
+          <label><input type="radio" name="sensitivity" value="MEDIUM"> Medium</label>
+          <label><input type="radio" name="sensitivity" value="HIGH"> High</label>
+        </div>
+        <p class="muted mt">High alerts more easily (more false alarms). Low only reacts to very clear stress.</p>
+      </div>
+    </section>
 
-    <div class="box">
-      <h2>Voice calibration</h2>
-      <p class="muted">Talk normally for 10 seconds so the app knows what your normal voice sounds like.</p>
-      <p id="baseline-status">Not calibrated yet.</p>
-      <button id="calibrate-btn" class="btn-primary">Record 10 seconds</button>
-      <button id="demo-baseline-btn">Use demo values</button>
-      <p id="calibrate-progress" class="muted"></p>
-    </div>
+    <section class="section grid-form">
+      <h2>Your normal voice</h2>
+      <div>
+        <p class="muted">Talk normally for 10 seconds so the app knows what your voice usually sounds like.</p>
+        <p id="baseline-status">Not calibrated yet.</p>
+        <div class="row">
+          <button id="calibrate-btn" class="btn-primary">Record 10 seconds</button>
+          <button id="demo-baseline-btn">Use demo values</button>
+        </div>
+        <p id="calibrate-progress" class="muted mt" role="status"></p>
+      </div>
+    </section>
 
-    <div class="box">
+    <section class="section grid-form">
       <h2>Disguise mode</h2>
-      <label><input type="checkbox" id="disguise-enabled"> Home page opens a fake app instead</label>
-      <label>Fake app</label>
-      <select id="disguise-type">
-        <option value="calculator">Calculator</option>
-        <option value="notes">Notes</option>
-      </select>
-      <label>Duress PIN, 4 to 8 digits (typing this in the fake app shows an empty, harmless dashboard)</label>
-      <input type="password" id="duress-pin-input" inputmode="numeric" maxlength="8" autocomplete="new-password">
-      <p id="pin-status" class="muted"></p>
-      <p><a href="disguise.html">Preview the fake app</a></p>
+      <div>
+        <label class="check"><input type="checkbox" id="disguise-enabled"> Home page opens a fake app instead</label>
+        <label for="disguise-type">Fake app</label>
+        <select id="disguise-type">
+          <option value="calculator">Calculator</option>
+          <option value="notes">Notes</option>
+        </select>
+        <label for="duress-pin-input">Duress PIN, 4 to 8 digits</label>
+        <input type="password" id="duress-pin-input" inputmode="numeric" maxlength="8" autocomplete="new-password">
+        <p id="pin-status" class="muted mt"></p>
+        <p class="muted">Typing this PIN in the fake app shows an empty, harmless dashboard. <a href="disguise.html">Preview the fake app</a></p>
+      </div>
+    </section>
+
+    <section class="section grid-form">
+      <h2>Analysis and location</h2>
+      <div>
+        <label class="check"><input type="checkbox" id="analysis-active-toggle"> Allow voice analysis (turn off to stop all analysis)</label>
+        <label class="check"><input type="checkbox" id="share-location-toggle"> Include my location in alerts</label>
+      </div>
+    </section>
+
+    <div class="save-bar">
+      <button id="save-settings-btn" class="btn-primary">Save settings</button>
+      <span id="save-status" class="muted" role="status"></span>
     </div>
 
-    <div class="box">
-      <h2>Voice analysis and location</h2>
-      <label><input type="checkbox" id="analysis-active-toggle"> Allow voice analysis (turn off to stop all analysis)</label>
-      <label><input type="checkbox" id="share-location-toggle"> Include my location in alerts</label>
-    </div>
-
-    <p><button id="save-settings-btn" class="btn-primary">Save settings</button> <span id="save-status" class="muted"></span></p>
-
-    <div class="box danger-zone">
+    <section class="section grid-form danger-zone">
       <h2>Your data</h2>
-      <p class="muted">Everything is stored on this computer only. Alerts are deleted automatically after 30 days.</p>
-      <p>
-        <button id="export-btn">Download my data</button>
-        <button id="withdraw-btn">Withdraw consent</button>
-        <button id="delete-all-btn" class="btn-red">Delete everything</button>
-      </p>
-      <p id="data-status" class="muted"></p>
-    </div>
-  </div>
+      <div>
+        <p class="muted">Download a copy of everything, withdraw consent, or delete it all. Deleting can't be undone. Your call ID stays the same.</p>
+        <div class="row">
+          <button id="export-btn">Download my data</button>
+          <button id="withdraw-btn">Withdraw consent</button>
+          <button id="delete-all-btn" class="btn-red">Delete everything</button>
+        </div>
+        <p id="data-status" class="muted mt" role="status"></p>
+      </div>
+    </section>
+  </main>
 
-  <script src="js/api.js"></script>
-  <script src="js/consent-check.js"></script>
-  <script src="js/settings.js"></script>
+  <script src="js/api.js?v=3"></script>
+  <script src="js/consent-check.js?v=3"></script>
+  <script src="js/settings.js?v=3"></script>
 </body>
 </html>

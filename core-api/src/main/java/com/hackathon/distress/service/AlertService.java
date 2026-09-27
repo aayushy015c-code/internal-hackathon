@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 //   2. every minute, if nobody acknowledged, notify the next contact
 //   3. acknowledge / cancel an alert
 //   4. delete old alerts (we don't keep personal data forever)
+// Every alert belongs to one user, and only that user's contacts are notified.
 @Service
 public class AlertService {
 
@@ -68,14 +69,15 @@ public class AlertService {
         this.ntfy = ntfy;
     }
 
-    public Alert create(AlertRequest req) {
+    public Alert create(Long userId, AlertRequest req) {
         Alert alert = new Alert();
+        alert.setUserId(userId);
         alert.setTriggerPath(req.triggerPath());
         alert.setStressScore(req.stressScore());
         alert.setRollingScore(req.rollingScore());
         alert.setReasons(req.reasons());
         alert.setTranscriptSnippet(req.transcriptSnippet());
-        if (getConfig().isShareLocation()) {
+        if (getConfig(userId).isShareLocation()) {
             alert.setLatitude(req.latitude());
             alert.setLongitude(req.longitude());
         }
@@ -89,14 +91,14 @@ public class AlertService {
         return alert;
     }
 
-    public Alert createTestAlert() {
-        return create(new AlertRequest("manual-test", "manual_test", 0, 0,
+    public Alert createTestAlert(Long userId) {
+        return create(userId, new AlertRequest("manual-test", "manual_test", 0, 0,
                 "Test alert sent from the dashboard.", "", null, null));
     }
 
     // Sends the alert to the contact at position `stage` in the priority list.
     private void notifyContact(Alert alert, int stage) {
-        List<Contact> contacts = contactRepo.findAllByOrderByPriorityOrderAsc();
+        List<Contact> contacts = contactRepo.findAllByUserIdOrderByPriorityOrderAsc(alert.getUserId());
         if (contacts.isEmpty()) {
             addToLog(alert, "no contacts saved, nothing sent");
             alertRepo.save(alert);
@@ -125,9 +127,9 @@ public class AlertService {
     @Scheduled(fixedRate = 60_000)
     public void escalateOldAlerts() {
         Instant cutoff = Instant.now().minus(timeoutMinutes, ChronoUnit.MINUTES);
-        int contactCount = contactRepo.findAllByOrderByPriorityOrderAsc().size();
 
         for (Alert alert : alertRepo.findByStatusAndLastNotifiedAtBefore("PENDING", cutoff)) {
+            int contactCount = contactRepo.findAllByUserIdOrderByPriorityOrderAsc(alert.getUserId()).size();
             int next = alert.getEscalationStage() + 1;
             if (next < contactCount) {
                 notifyContact(alert, next);
@@ -157,8 +159,8 @@ public class AlertService {
     }
 
     // The user said it was a false alarm. Tell everyone who already got the alert.
-    public Optional<Alert> cancel(Long id) {
-        return alertRepo.findById(id).map(alert -> {
+    public Optional<Alert> cancel(Long userId, Long id) {
+        return alertRepo.findByIdAndUserId(id, userId).map(alert -> {
             if ("CANCELLED".equals(alert.getStatus())) {
                 return alert; // already cancelled, don't send the message twice
             }
@@ -167,7 +169,7 @@ public class AlertService {
             alertRepo.save(alert);
             audit.info("alert {} cancelled", id);
 
-            List<Contact> contacts = contactRepo.findAllByOrderByPriorityOrderAsc();
+            List<Contact> contacts = contactRepo.findAllByUserIdOrderByPriorityOrderAsc(userId);
             int notifiedCount = Math.min(alert.getEscalationStage() + 1, contacts.size());
             for (int i = 0; i < notifiedCount; i++) {
                 ntfy.send(contacts.get(i).getNtfyTopic(), "Silent Signal: false alarm",
@@ -177,13 +179,13 @@ public class AlertService {
         });
     }
 
-    public List<Alert> listAll() {
-        return alertRepo.findAllByOrderByCreatedAtDesc();
+    public List<Alert> listAll(Long userId) {
+        return alertRepo.findAllByUserIdOrderByCreatedAtDesc(userId);
     }
 
-    // Get the settings row, creating it with default values the first time.
-    public AppConfig getConfig() {
-        return configRepo.findById(1L).orElseGet(() -> configRepo.save(new AppConfig()));
+    // Get this user's settings row, creating it with default values the first time.
+    public AppConfig getConfig(Long userId) {
+        return configRepo.findById(userId).orElseGet(() -> configRepo.save(new AppConfig(userId)));
     }
 
     // The address contacts' phones use for the ack link.

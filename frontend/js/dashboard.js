@@ -20,11 +20,16 @@ function setBar(id, percent) {
   el(id).style.width = Math.max(0, Math.min(100, percent)) + "%";
 }
 
+// colour of a bar: olive = fine, bronze = rising, oxblood = high (see styles.css)
+function setLevel(id, score) {
+  el(id).className = score >= 65 ? "level-high" : score >= 40 ? "level-mid" : "level-low";
+}
+
 function showResult(r) {
   setBar("rolling-bar", r.rolling_score);
-  el("rolling-bar").style.background = r.rolling_score >= 65 ? "#c0392b" : r.rolling_score >= 40 ? "#e67e22" : "#27ae60";
+  setLevel("rolling-bar", r.rolling_score);
   el("rolling-value").textContent = r.rolling_score;
-  el("last-updated").textContent = "(updated " + new Date().toLocaleTimeString() + ")";
+  el("last-updated").textContent = "Updated " + new Date().toLocaleTimeString() + ".";
 
   if (r.alert_triggered) {
     el("trigger-banner").classList.remove("hidden");
@@ -33,10 +38,12 @@ function showResult(r) {
 
   const s = r.signals;
   setBar("pitch-bar", s.pitch.delta_pct);
+  setLevel("pitch-bar", s.pitch.delta_pct);
   el("pitch-value").textContent = s.pitch.value_hz + " Hz (" + s.pitch.delta_pct + "% vs normal)";
   setBar("energy-bar", s.energy.delta_pct);
+  setLevel("energy-bar", s.energy.delta_pct);
   el("energy-value").textContent = s.energy.delta_pct + "% vs normal";
-  setBar("silence-bar", s.silence.ratio * 100);
+  setBar("silence-bar", s.silence.ratio * 100); // silence is normal while listening, so it stays olive
   el("silence-value").textContent = Math.round(s.silence.ratio * 100) + "% of the clip";
   el("codeword-value").textContent = s.codeword.matched ? 'heard "' + s.codeword.phrase + '"' : "not heard";
 }
@@ -47,7 +54,7 @@ async function loadAlerts() {
   try {
     const alerts = await Api.Alerts.list();
     if (alerts.length === 0) {
-      el("alert-list").innerHTML = '<p class="muted">No alerts yet.</p>';
+      el("alert-list").innerHTML = '<p class="muted">No alerts yet. Use "Send test alert" to check that your contacts get notified.</p>';
       return;
     }
     let html = "<table><tr><th>Time</th><th>Why</th><th>Status</th></tr>";
@@ -57,8 +64,8 @@ async function loadAlerts() {
       html += "<td>" + escapeHtml(a.reasons);
       if (a.transcriptSnippet) html += '<br><span class="muted">"...' + escapeHtml(a.transcriptSnippet) + '"</span>';
       html += "</td>";
-      html += '<td class="status-' + escapeHtml(a.status) + '">' + escapeHtml(a.status);
-      if (a.status === "PENDING") html += '<br><button data-cancel="' + a.id + '">False alarm</button>';
+      html += '<td><span class="status-' + escapeHtml(a.status) + '">' + escapeHtml(a.status) + "</span>";
+      if (a.status === "PENDING") html += '<br><button class="btn-small" data-cancel="' + a.id + '">False alarm</button>';
       html += "</td></tr>";
     }
     el("alert-list").innerHTML = html + "</table>";

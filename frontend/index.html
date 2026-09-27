@@ -4,26 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; connect-src 'self' http://localhost:8080 http://localhost:8000 https://0.peerjs.com wss://0.peerjs.com; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="theme-color" content="#1C2430">
   <title>Silent Signal</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=3">
 </head>
 <body>
-  <header><div class="container"><b>Silent Signal</b></div></header>
+  <header><div class="container">
+    <b>Silent Signal</b>
+    <nav aria-label="Main"><a href="index.html" aria-current="page">Home</a><a href="call.html">Call</a><a href="dashboard.html">Dashboard</a><a href="settings.html">Settings</a></nav>
+  </div></header>
 
-  <div class="container">
-    <div class="box">
-      <p>Silent Signal listens to your side of a phone call and quietly alerts your trusted contacts if you say a secret code word or sound stressed.</p>
-      <p><a href="call.html">Start a call</a></p>
-      <p><a href="dashboard.html">Dashboard</a> (live scores and alert history)</p>
-      <p><a href="settings.html">Settings</a> (contacts, code words, calibration, your data)</p>
-      <p><a href="consent.html">Privacy notice</a></p>
-      <button id="install-btn" class="hidden">Install as an app</button>
+  <main class="container">
+    <div class="home">
+      <div>
+        <h1>Quiet help during a phone call.</h1>
+        <p class="lede">Silent Signal listens to your side of a call and alerts people you trust if something is wrong.</p>
+        <a class="link-button" href="call.html">Start a call</a>
+        <button id="install-btn" class="hidden">Install as an app</button>
+      </div>
+      <div class="panel">
+        <ul class="home-links">
+          <li><a href="dashboard.html"><b>Dashboard</b><span>Live stress score and alert history</span></a></li>
+          <li><a href="settings.html"><b>Settings</b><span>Contacts, code words, calibration, your data</span></a></li>
+          <li><a href="consent.html"><b>Privacy notice</b><span>What is stored and what you can do about it</span></a></li>
+        </ul>
+      </div>
     </div>
-    <p class="muted">Project for PSWB03: Non-Verbal Distress Detection via Voice Pattern Analysis.</p>
-  </div>
+    <p class="footnote">Project for PSWB03: Non-Verbal Distress Detection via Voice Pattern Analysis.</p>
+  </main>
 
-  <script src="js/api.js"></script>
-  <script src="js/home.js"></script>
+  <script src="js/api.js?v=3"></script>
+  <script src="js/home.js?v=3"></script>
 </body>
 </html>

@@ -4,51 +4,59 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; connect-src 'self' http://localhost:8080 http://localhost:8000 https://0.peerjs.com wss://0.peerjs.com; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="theme-color" content="#1C2430">
   <title>Dashboard</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=3">
 </head>
 <body>
   <header><div class="container">
     <b>Silent Signal</b>
-    <nav><a href="index.html">Home</a><a href="call.html">Call</a><a href="settings.html">Settings</a></nav>
+    <nav aria-label="Main"><a href="index.html">Home</a><a href="call.html">Call</a><a href="dashboard.html" aria-current="page">Dashboard</a><a href="settings.html">Settings</a></nav>
   </div></header>
 
-  <div class="container">
-    <p id="no-live-banner" class="muted">No call running. Start one on the <a href="call.html">Call page</a> in another tab and the scores will show up here.</p>
-
-    <div class="box">
-      <h2>Stress score (average of last 12 seconds)</h2>
-      <div class="meter big"><div id="rolling-bar"></div></div>
-      <b id="rolling-value">0</b> / 100 <span id="last-updated" class="muted"></span>
-      <div id="trigger-banner" class="alert-banner hidden"></div>
+  <main class="container">
+    <div class="page-head">
+      <h1>Dashboard</h1>
     </div>
 
-    <div class="box">
-      <h2>What the app is hearing</h2>
-      Pitch <span id="pitch-value" class="muted">-</span>
-      <div class="meter"><div id="pitch-bar"></div></div>
-      Loudness <span id="energy-value" class="muted">-</span>
-      <div class="meter"><div id="energy-bar"></div></div>
-      Silence <span id="silence-value" class="muted">-</span>
-      <div class="meter"><div id="silence-bar"></div></div>
-      <p>Code word: <span id="codeword-value">not heard</span></p>
+    <p id="no-live-banner" class="notice-bar">No call running. Start one on the <a href="call.html">call page</a> in another tab and the scores show up here.</p>
+
+    <div class="grid-2">
+      <section class="panel" aria-live="polite">
+        <h2>Stress score</h2>
+        <div class="score"><span id="rolling-value">0</span><small> / 100</small></div>
+        <div class="meter big"><div id="rolling-bar"></div></div>
+        <p class="muted">Average of the last 12 seconds. <span id="last-updated"></span></p>
+        <div id="trigger-banner" class="alert-banner hidden" role="alert"></div>
+      </section>
+
+      <section>
+        <h2>What the app is hearing</h2>
+        <div class="signal-name">Pitch <span id="pitch-value" class="num">-</span></div>
+        <div class="meter"><div id="pitch-bar"></div></div>
+        <div class="signal-name">Loudness <span id="energy-value" class="num">-</span></div>
+        <div class="meter"><div id="energy-bar"></div></div>
+        <div class="signal-name">Silence <span id="silence-value" class="num">-</span></div>
+        <div class="meter"><div id="silence-bar"></div></div>
+        <div class="signal-name">Code word <span id="codeword-value">not heard</span></div>
+      </section>
     </div>
 
-    <div class="box">
-      <h2>Test</h2>
-      <p class="muted">Sends a real notification to your first contact.</p>
-      <button id="test-alert-btn">Send test alert</button>
-    </div>
+    <section class="section mt">
+      <div class="row spread">
+        <div>
+          <h2>Alert history</h2>
+          <p class="muted">Alerts are deleted automatically after 30 days.</p>
+        </div>
+        <button id="test-alert-btn">Send test alert</button>
+      </div>
+      <div id="alert-list"><p class="muted">Loading alerts...</p></div>
+    </section>
+  </main>
 
-    <div class="box">
-      <h2>Alert history</h2>
-      <div id="alert-list">Loading...</div>
-    </div>
-  </div>
-
-  <script src="js/api.js"></script>
-  <script src="js/consent-check.js"></script>
-  <script src="js/dashboard.js"></script>
+  <script src="js/api.js?v=3"></script>
+  <script src="js/consent-check.js?v=3"></script>
+  <script src="js/dashboard.js?v=3"></script>
 </body>
 </html>

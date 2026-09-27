@@ -29,9 +29,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-class EncryptionAndTunnelTests {
+class EncryptionAndTunnelTests extends UserTestSupport {
 
-    @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
     @Autowired AlertRepository alertRepo;
     @Autowired AlertService alertService;
@@ -57,7 +56,7 @@ class EncryptionAndTunnelTests {
 
         // ...but the app still reads it back normally
         mvc.perform(get("/api/contacts")).andExpect(jsonPath("$[0].name").value("Priya Sharma"));
-        Alert alert = alertRepo.findAllByOrderByCreatedAtDesc().get(0);
+        Alert alert = alertRepo.findAllByUserIdOrderByCreatedAtDesc(userId).get(0);
         assertEquals(12.9716, alert.getLatitude());
         assertNotEquals(alert.getAckToken(), alert.getAckTokenHash());
     }

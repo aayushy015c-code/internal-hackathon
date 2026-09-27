@@ -38,6 +38,30 @@ There are 3 parts, and each one runs in its own terminal:
 
 ---
 
+## How it looks
+
+The interface uses six colours only (a CI check fails if any other colour appears in the frontend):
+
+| Colour | Hex | Used for (60 / 30 / 10 rule) |
+|---|---|---|
+| Bone | `#E6E0D6` | 60%: page background (light mode) |
+| Navy | `#1C2430` | 30%: header, headings, main buttons, main panels |
+| Oxblood | `#4B1E23` | 10%: only danger and alerts (pending alert, high stress, hang up, delete) |
+| Olive | `#6B6F4E` | safe / on / acknowledged, dividers |
+| Bronze | `#8A5A2B` | medium / warning, helper text, focus |
+| Ink | `#121212` | text, and the background in dark mode |
+
+It follows your system's light or dark mode, respects "reduce motion", and every text colour passes WCAG AA contrast. Details are at the top of `frontend/css/styles.css`.
+
+## Your identity (call ID)
+
+The first time you open the app, it gives you a **permanent call ID** like `SS-K7P3-9QDM-X2WA`. It stays the same after refreshing, restarting the browser or restarting Docker, because it's stored in the database.
+
+- **Calling:** give your call ID to the people who might call you. They type it on the Call page.
+- **Your data is yours:** contacts, code words, calibration, disguise PIN and alerts all belong to your call ID. Another user never sees them.
+- **Another browser:** Settings > Your identity shows your secret **access key**. Paste it into "Use an existing identity" in the other browser to get the same call ID and data there. Keep the key private: it works like a password.
+- **Data from before this feature** automatically belongs to the first user who opens the app.
+
 ## How it decides to send an alert
 
 There are two ways an alert can be triggered:

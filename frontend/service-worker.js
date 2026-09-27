@@ -1,7 +1,7 @@
 // Needed so Chrome lets you "install" the site as an app.
 // Network first: always get the newest files, and only use the saved copy
 // if the server is down. (Cache first made our code changes not show up.)
-const CACHE = "silent-signal-v3";
+const CACHE = "silent-signal-v5";
 
 self.addEventListener("install", () => self.skipWaiting());
 

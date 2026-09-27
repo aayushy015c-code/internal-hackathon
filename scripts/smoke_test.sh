@@ -19,7 +19,11 @@ fail() { echo "FAIL  $1"; FAILED=1; }
 check() { # check "name" expected actual
   if [ "$2" = "$3" ]; then pass "$1"; else fail "$1 (expected $2, got $3)"; fi
 }
-code() { curl -s -o /dev/null -w "%{http_code}" "$@"; }
+KEY=""  # the test user's access key (set after registering, like the browser does)
+code() { curl -s -o /dev/null -w "%{http_code}" -H "X-User-Key: $KEY" "$@"; }
+api() { curl -s -H "X-User-Key: $KEY" "$@"; }
+new_user() { curl -s -XPOST localhost:8080/api/users; }
+field() { python3 -c "import json,sys; print(json.load(sys.stdin)['$1'])"; }
 
 MODE=${MODE:-local}
 WORK=$(mktemp -d)
@@ -54,7 +58,13 @@ done
 
 check "core API is up"            200 "$(code localhost:8080/api/health)"
 check "analysis service is up"    200 "$(code localhost:8000/health)"
-curl -s -XPOST localhost:8000/reload-config > /dev/null
+
+# --- identity: every user gets a permanent call ID and their own data ---
+check "no access key = no data"  401 "$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/api/config)"
+USER_A=$(new_user); KEY=$(echo "$USER_A" | field accessKey); CALL_ID=$(echo "$USER_A" | field callId)
+case "$CALL_ID" in SS-????-????-????) pass "user gets a call ID ($CALL_ID)";; *) fail "user gets a call ID (got $CALL_ID)";; esac
+check "call ID stays the same"   "$CALL_ID" "$(api localhost:8080/api/users/me | field callId)"
+api -XPOST localhost:8000/reload-config > /dev/null
 
 CLIP="$WORK/clip.webm"; head -c 2000 /dev/urandom > "$CLIP"
 check "no analysis before consent" 403 "$(code -F session_id=t -F "audio=@$CLIP;type=audio/webm" localhost:8000/analyze)"
@@ -62,18 +72,27 @@ check "no analysis before consent" 403 "$(code -F session_id=t -F "audio=@$CLIP;
 check "give consent" 200 "$(code -XPUT -H 'Content-Type: application/json' -d '{"given":true}' localhost:8080/api/config/consent)"
 check "save settings" 200 "$(code -XPUT -H 'Content-Type: application/json' localhost:8080/api/config \
   -d '{"codeWords":"red umbrella","cancelCodeWord":"false alarm","sensitivity":"MEDIUM","disguiseEnabled":false,"disguiseType":"calculator","duressPin":"4821","analysisActive":true,"shareLocation":true}')"
-curl -s -XPOST localhost:8000/reload-config > /dev/null
+api -XPOST localhost:8000/reload-config > /dev/null
 
 check "analyze a clip"            200 "$(code -F session_id=t -F "audio=@$CLIP;type=audio/webm" localhost:8000/analyze)"
 check "forced alert reaches core" 200 "$(code -F session_id=t2 -F force_alert=true -F "audio=@$CLIP;type=audio/webm" localhost:8000/analyze)"
 sleep 1
-ALERTS=$(curl -s localhost:8080/api/alerts)
+ALERTS=$(api localhost:8080/api/alerts)
 case "$ALERTS" in *nonverbal*) pass "alert was saved";; *) fail "alert was saved";; esac
 case "$ALERTS" in *ackToken*) fail "ack token leaked in alert list";; *) pass "ack token not in alert list";; esac
 
-CONFIG=$(curl -s localhost:8080/api/config)
+CONFIG=$(api localhost:8080/api/config)
 case "$CONFIG" in *4821*) fail "duress PIN leaked";; *) pass "duress PIN not in config";; esac
-check "PIN check" '{"match":true}' "$(curl -s -XPOST -H 'Content-Type: application/json' -d '{"pin":"4821"}' localhost:8080/api/disguise/check-pin)"
+check "PIN check" '{"match":true}' "$(api -XPOST -H 'Content-Type: application/json' -d '{"pin":"4821"}' localhost:8080/api/disguise/check-pin)"
+
+# --- a second user sees none of the first user's data ---
+api -XPOST -H 'Content-Type: application/json' localhost:8080/api/contacts -d '{"name":"Priya","ntfyTopic":"silent-signal-smoke-topic","priorityOrder":0}' > /dev/null
+KEY_A=$KEY
+KEY=$(new_user | field accessKey)
+check "user B has no contacts"   "[]" "$(api localhost:8080/api/contacts)"
+check "user B has no alerts"     "[]" "$(api localhost:8080/api/alerts)"
+case "$(api localhost:8080/api/config)" in *"red umbrella"*) fail "user B sees user A's code words";; *) pass "user B has their own settings";; esac
+KEY=$KEY_A
 
 check "other website blocked (analysis)" 403 "$(code -XPOST -H 'Origin: https://evil.example' localhost:8000/calibrate/demo)"
 check "other website blocked (core)"     403 "$(code -XPOST -H 'Origin: https://evil.example' localhost:8080/api/alerts/1/cancel)"
@@ -84,7 +103,7 @@ check "guessed ack link rejected"        404 "$(code localhost:8080/api/alerts/a
 # Is the saved data unreadable for someone who opens the database?
 sleep 1
 if [ "$MODE" = "docker" ]; then
-  RAW=$(docker compose exec -T db psql -U silentsignal -d silentsignal -tAc "select code_words from app_config")
+  RAW=$(docker compose exec -T db psql -U silentsignal -d silentsignal -tAc "select string_agg(coalesce(code_words,''), ',') from app_config")
   case "$RAW" in
     "") fail "could not read the database";;
     *"red umbrella"*) fail "code words stored as plain text";;
@@ -99,7 +118,8 @@ else
 fi
 
 check "delete everything" 204 "$(code -XDELETE localhost:8080/api/data)"
-check "contacts gone" "[]" "$(curl -s localhost:8080/api/contacts)"
+check "contacts gone" "[]" "$(api localhost:8080/api/contacts)"
+check "call ID kept after deleting data" "$CALL_ID" "$(api localhost:8080/api/users/me | field callId)"
 
 if [ $FAILED -ne 0 ]; then
   if [ "$MODE" = "docker" ]; then

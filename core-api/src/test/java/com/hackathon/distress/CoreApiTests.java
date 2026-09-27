@@ -24,9 +24,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-class CoreApiTests {
+class CoreApiTests extends UserTestSupport {
 
-    @Autowired MockMvc mvc;
     @Autowired AlertRepository alertRepo;
     @Autowired com.hackathon.distress.service.AlertService alertService;
     @MockitoBean NtfyService ntfy; // don't send real notifications in tests
@@ -52,7 +51,7 @@ class CoreApiTests {
     private Alert createAlert() throws Exception {
         mvc.perform(post("/api/alerts").contentType(MediaType.APPLICATION_JSON).content(ALERT))
                 .andExpect(status().isCreated());
-        return alertRepo.findAllByOrderByCreatedAtDesc().get(0);
+        return alertRepo.findAllByUserIdOrderByCreatedAtDesc(userId).get(0);
     }
 
     @Test

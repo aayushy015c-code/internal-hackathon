@@ -4,37 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; connect-src 'self' http://localhost:8080 http://localhost:8000 https://0.peerjs.com wss://0.peerjs.com; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="theme-color" content="#1C2430">
   <title>Privacy notice</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=3">
 </head>
 <body>
   <header><div class="container">
     <b>Silent Signal</b>
-    <nav><a href="index.html">Home</a><a href="settings.html">Settings</a></nav>
+    <nav aria-label="Main"><a href="index.html">Home</a><a href="settings.html">Settings</a></nav>
   </div></header>
 
-  <div class="container">
-    <div class="box notice">
-      <h2>Privacy notice</h2>
-      <p>Please read this before using Silent Signal. You can withdraw your consent any time in Settings.</p>
-      <ul>
-        <li><b>What we process:</b> your microphone during a call (4 seconds at a time), the words you say, and how your voice sounds (pitch, loudness, pauses). If you allow it, your location.</li>
-        <li><b>Why:</b> only to detect if you might be in danger and alert the contacts you chose.</li>
-        <li><b>Where:</b> on this computer. Audio is never saved and never leaves this computer.</li>
-        <li><b>What is saved:</b> your settings, your contacts' names and ntfy topics, and alerts (reason, last ~10 words, location if allowed). Saved on this computer, with personal details encrypted. Alerts are deleted after 30 days.</li>
-        <li><b>What leaves this computer:</b> the alert message (reason and location, if allowed) is sent through ntfy.sh to your contacts' phones over HTTPS. ntfy.sh keeps messages for about 12 hours. The call itself connects through PeerJS's free server, which sees your IP address. If you turn on the tunnel, Cloudflare carries your contact's "Acknowledge" tap back to this computer.</li>
-        <li><b>Your contacts:</b> please tell them you've added them and what they will receive.</li>
-        <li><b>The other person on the call:</b> only your microphone is analyzed, but their voice may be picked up if you use a speaker. Consider telling them.</li>
-        <li><b>Your rights:</b> in Settings you can download all your data, delete all of it, or withdraw consent.</li>
-        <li><b>Under 18?</b> A parent or guardian must agree for you.</li>
-        <li><b>Questions or complaints:</b> contact the project team (see PRIVACY.md).</li>
-      </ul>
-      <label><input type="checkbox" id="agree"> I have read this and I agree</label>
-      <p class="mt"><button id="accept-btn" class="btn-primary" disabled>Continue</button> <span id="consent-status" class="muted"></span></p>
+  <main class="container narrow notice">
+    <div class="page-head">
+      <h1>Before you start</h1>
+      <p>Please read this. You can withdraw your consent any time in Settings.</p>
     </div>
-  </div>
+    <ul>
+      <li><b>What we process:</b> your microphone during a call (4 seconds at a time), the words you say, and how your voice sounds (pitch, loudness, pauses). If you allow it, your location.</li>
+      <li><b>Why:</b> only to detect if you might be in danger and alert the contacts you chose.</li>
+      <li><b>Where:</b> on this computer. Audio is never saved and never leaves this computer.</li>
+      <li><b>What is saved:</b> your settings, your contacts' names and ntfy topics, and alerts (reason, last ~10 words, location if allowed). Saved on this computer, with personal details encrypted. Alerts are deleted after 30 days.</li>
+      <li><b>What leaves this computer:</b> the alert message (reason and location, if allowed) is sent through ntfy.sh to your contacts' phones over HTTPS. ntfy.sh keeps messages for about 12 hours. The call itself connects through PeerJS's free server, which sees your IP address. If you turn on the tunnel, Cloudflare carries your contact's "Acknowledge" tap back to this computer.</li>
+      <li><b>Your contacts:</b> please tell them you've added them and what they will receive.</li>
+      <li><b>The other person on the call:</b> only your microphone is analyzed, but their voice may be picked up if you use a speaker. Consider telling them.</li>
+      <li><b>Your rights:</b> in Settings you can download all your data, delete all of it, or withdraw consent.</li>
+      <li><b>Under 18?</b> A parent or guardian must agree for you.</li>
+      <li><b>Questions or complaints:</b> contact the project team (see PRIVACY.md).</li>
+      </ul>
+    <div class="panel mt">
+      <label class="check"><input type="checkbox" id="agree"> I have read this and I agree</label>
+      <p class="mt"><button id="accept-btn" class="btn-primary" disabled>Continue</button> <span id="consent-status" role="status"></span></p>
+    </div>
+  </main>
 
-  <script src="js/api.js"></script>
-  <script src="js/consent.js"></script>
+  <script src="js/api.js?v=3"></script>
+  <script src="js/consent.js?v=3"></script>
 </body>
 </html>

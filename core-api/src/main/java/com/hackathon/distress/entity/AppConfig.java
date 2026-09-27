@@ -7,13 +7,20 @@ import jakarta.persistence.*;
 
 import java.time.Instant;
 
-// The user's settings. There is only one user, so there is only one row (id = 1).
+// One user's settings. One row per user; the row id is the user's id.
 @Entity
 @Table(name = "app_config")
 public class AppConfig {
 
     @Id
-    private Long id = 1L;
+    private Long id;
+
+    public AppConfig() {
+    }
+
+    public AppConfig(Long userId) {
+        this.id = userId;
+    }
 
     // comma separated, e.g. "red umbrella,call my sister"
     @Convert(converter = FieldEncryptor.class)

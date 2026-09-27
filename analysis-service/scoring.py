@@ -87,8 +87,8 @@ def clip_score(pitch_change, energy_change, silence_ratio):
     return round(pitch_points + energy_points + silence_points)
 
 
-def evaluate(session_id, text, pitch, loudness, silence_ratio):
-    s = config.settings
+def evaluate(session_id, text, pitch, loudness, silence_ratio, s):
+    # s = this user's settings (config.settings_for)
     session = get_session(session_id)
     session["texts"].append(text)
     recent_text = " ".join(session["texts"]).strip()
@@ -109,7 +109,7 @@ def evaluate(session_id, text, pitch, loudness, silence_ratio):
     if not cooling_down:
         if match >= CODE_WORD_MATCH:
             trigger = "codeword"
-        elif len(session["scores"]) == 3 and rolling >= config.threshold():  # need a full 12 seconds first
+        elif len(session["scores"]) == 3 and rolling >= config.threshold(s):  # need a full 12 seconds first
             trigger = "nonverbal"
     if trigger:
         session["last_alert_time"] = time.time()
@@ -129,8 +129,8 @@ def evaluate(session_id, text, pitch, loudness, silence_ratio):
     }
 
 
-def said_cancel_phrase(session_id):
-    cancel = config.settings["cancel_word"]
+def said_cancel_phrase(session_id, s):
+    cancel = s["cancel_word"]
     text = " ".join(get_session(session_id)["texts"]).strip()
     if not cancel or not text:
         return False
