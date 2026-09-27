@@ -4,7 +4,7 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: ["**"] # every branch, so feature branches (e.g. ui-refresh) are tested too
   pull_request:
   workflow_dispatch:
 
@@ -69,6 +69,12 @@ jobs:
           for f in frontend/*.html; do
             grep -q 'Content-Security-Policy' "$f" || { echo "$f has no CSP"; exit 1; }
           done
+      - name: Only the brand palette is used (#E6E0D6 #4B1E23 #6B6F4E #1C2430 #8A5A2B #121212)
+        run: |
+          found=$(grep -rhoiE '#[0-9a-f]{6}\b|#[0-9a-f]{3}\b|\b(rgba?|hsla?)\(' frontend --include='*.css' --include='*.html' --include='*.js' --include='*.json' --include='*.conf' | tr a-f A-F | sort -u)
+          bad=$(echo "$found" | grep -vxE '#(E6E0D6|4B1E23|6B6F4E|1C2430|8A5A2B|121212)' | grep . || true)
+          if [ -n "$bad" ]; then echo "Colours outside the palette:"; echo "$bad"; exit 1; fi
+          echo "Palette OK:"; echo "$found"
       - name: CDN scripts have an integrity hash
         run: |
           if grep -n 'src="https://' frontend/*.html | grep -v integrity; then

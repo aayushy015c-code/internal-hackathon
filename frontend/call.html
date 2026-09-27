@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; connect-src 'self' http://localhost:8080 http://localhost:8000 https://0.peerjs.com wss://0.peerjs.com; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="theme-color" content="#1C2430">
   <title>Call</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/styles.css">
@@ -13,39 +14,43 @@
 <body>
   <header><div class="container">
     <b>Silent Signal</b>
-    <nav><a href="index.html">Home</a><a href="dashboard.html" target="_blank">Dashboard</a><a href="settings.html">Settings</a></nav>
+    <nav aria-label="Main"><a href="index.html">Home</a><a href="call.html" aria-current="page">Call</a><a href="dashboard.html">Dashboard</a><a href="settings.html">Settings</a></nav>
   </div></header>
 
-  <div class="container">
-    <div class="box call-status">
-      <div id="call-status" class="big">Not connected</div>
-      <div id="call-timer" class="muted hidden">00:00</div>
-      <div id="in-call-panel" class="call-buttons mt hidden">
-        <button id="mute-btn">Mute</button>
-        <button id="hangup-btn" class="btn-red">Hang up</button>
-      </div>
-    </div>
+  <main class="container">
+    <div class="call-layout">
+      <section class="panel call-card" aria-live="polite">
+        <div id="call-status" class="big">Not connected</div>
+        <div id="call-timer" class="hidden">00:00</div>
+        <div id="in-call-panel" class="call-buttons hidden">
+          <button id="mute-btn">Mute</button>
+          <button id="hangup-btn" class="btn-red">Hang up</button>
+        </div>
+      </section>
 
-    <div id="setup-panel" class="box">
-      <label>Your ID (send this to the person who will call you)</label>
-      <div class="row">
-        <input type="text" id="my-peer-id" readonly placeholder="connecting...">
-        <button id="copy-id-btn">Copy</button>
-      </div>
-      <label>Call someone using their ID</label>
-      <div class="row">
-        <input type="text" id="remote-peer-id" placeholder="their ID" maxlength="64">
-        <button id="call-btn" class="btn-primary">Call</button>
-      </div>
+      <section id="setup-panel">
+        <h2>Connect</h2>
+        <label for="my-peer-id">Your ID (send this to the person who will call you)</label>
+        <div class="row">
+          <input type="text" id="my-peer-id" readonly placeholder="Connecting...">
+          <button id="copy-id-btn">Copy</button>
+        </div>
+        <label for="remote-peer-id">Call someone using their ID</label>
+        <div class="row">
+          <input type="text" id="remote-peer-id" placeholder="Their ID" maxlength="64">
+          <button id="call-btn" class="btn-primary">Call</button>
+        </div>
+      </section>
     </div>
 
     <!-- The user must always be able to see if their voice is being analyzed, and stop it. -->
-    <div class="box row spread">
+    <div class="analysis-bar">
       <span><span id="analysis-dot" class="dot"></span><span id="analysis-label">Voice analysis: off</span></span>
-      <button id="analysis-toggle-btn">Start</button>
+      <button id="analysis-toggle-btn" class="btn-small">Start</button>
     </div>
-    <p id="analysis-error" class="muted"></p>
-  </div>
+    <p id="analysis-error" class="muted" role="status"></p>
+    <p class="muted">Keep the <a href="dashboard.html" target="_blank" rel="noopener">dashboard</a> open in another tab to watch the live score. Nothing is shown on this screen during a call, on purpose.</p>
+  </main>
 
   <audio id="remote-audio" autoplay></audio>
 
