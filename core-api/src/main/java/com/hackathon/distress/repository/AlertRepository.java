@@ -10,11 +10,14 @@ import java.util.List;
 import java.util.Optional;
 
 // Spring writes the SQL for us based on the method names.
+// Everything the user sees is filtered by userId.
 public interface AlertRepository extends JpaRepository<Alert, Long> {
 
-    List<Alert> findAllByOrderByCreatedAtDesc();
+    List<Alert> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
-    // alerts that are still waiting and were last sent before `cutoff`
+    Optional<Alert> findByIdAndUserId(Long id, Long userId);
+
+    // used by the escalation timer, for all users
     List<Alert> findByStatusAndLastNotifiedAtBefore(String status, Instant cutoff);
 
     Optional<Alert> findByAckTokenHash(String ackTokenHash);
@@ -22,4 +25,13 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
     @Modifying
     @Query("delete from Alert a where a.createdAt < :cutoff")
     int deleteOlderThan(Instant cutoff);
+
+    @Modifying
+    @Query("delete from Alert a where a.userId = :userId")
+    int deleteAllForUser(Long userId);
+
+    // alerts saved before users existed belong to the first user
+    @Modifying
+    @Query("update Alert a set a.userId = :userId where a.userId is null")
+    int claimUnowned(Long userId);
 }

@@ -1,5 +1,9 @@
 // The call page: a voice call using PeerJS (WebRTC), and voice analysis at the same time.
 // PeerJS gives us a free server to connect the two browsers, so we don't need our own.
+//
+// Your call ID (e.g. SS-K7P3-9QDM-X2WA) is permanent and comes from our backend.
+// PeerJS needs its own connection ID; we build it from the call ID, so the
+// person calling you only ever needs your call ID.
 
 let peer = null;
 let localStream = null; // our microphone, shared by the call and the recorder
@@ -28,21 +32,76 @@ function releaseMicIfUnused() {
 
 // ---- Call ----
 
-peer = new Peer();
-peer.on("open", (id) => (el("my-peer-id").value = id));
-peer.on("error", (err) => (el("call-status").textContent = "Error: " + err.type));
+const CALL_ID_FORMAT = /^SS-[2-9A-Z]{4}-[2-9A-Z]{4}-[2-9A-Z]{4}$/;
+
+// "SS-K7P3-9QDM-X2WA" -> "silentsignal-ss-k7p3-9qdm-x2wa" (the PeerJS connection ID)
+function peerIdFor(callId) {
+  return "silentsignal-" + callId.toLowerCase();
+}
+
+// accept " ss-k7p3-9qdm-x2wa " as well
+function cleanCallId(text) {
+  return text.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+let myCallId = null;
+let idRetries = 0;
+
+async function connectPeer() {
+  try {
+    myCallId = (await Api.Me.get()).callId;
+  } catch (err) {
+    el("call-status").textContent = "Can't load your call ID. Is the core API running?";
+    return;
+  }
+  el("my-peer-id").value = myCallId;
+  peer = new Peer(peerIdFor(myCallId));
+  peer.on("open", () => {
+    idRetries = 0;
+    if (!currentCall) el("call-status").textContent = "Not connected";
+  });
+  peer.on("error", (err) => {
+    if (err.type === "unavailable-id" && idRetries < 5) {
+      // after a page reload PeerJS can hold on to our ID for a few seconds: wait and retry
+      idRetries++;
+      el("call-status").textContent = "Getting ready...";
+      peer.destroy();
+      setTimeout(connectPeer, 3000);
+      return;
+    }
+    const messages = {
+      "unavailable-id": "Your call ID is already open in another tab or window. Close it and reload this page.",
+      "peer-unavailable": "That person isn't online. Their call page must be open.",
+      network: "Can't reach the call server. Check your internet.",
+    };
+    el("call-status").textContent = messages[err.type] || "Error: " + err.type;
+  });
+  peer.on("disconnected", () => {
+    if (!peer.destroyed) peer.reconnect(); // Wi-Fi blip: keep being reachable
+  });
+  peer.on("call", onIncomingCall);
+}
+connectPeer();
 
 // someone is calling us
-peer.on("call", async (call) => {
+async function onIncomingCall(call) {
   call.answer(await getMic());
   setupCall(call);
-});
+}
 
 el("call-btn").onclick = async () => {
-  const id = el("remote-peer-id").value.trim();
-  if (!id) return;
+  const id = cleanCallId(el("remote-peer-id").value);
+  if (!id || !peer) return;
+  if (!CALL_ID_FORMAT.test(id)) {
+    el("call-status").textContent = "That doesn't look like a call ID (like SS-K7P3-9QDM-X2WA).";
+    return;
+  }
+  if (id === myCallId) {
+    el("call-status").textContent = "That's your own call ID.";
+    return;
+  }
   el("call-status").textContent = "Calling...";
-  setupCall(peer.call(id, await getMic()));
+  setupCall(peer.call(peerIdFor(id), await getMic()));
 };
 
 function setupCall(call) {

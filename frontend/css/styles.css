@@ -16,6 +16,9 @@
   used for fills, borders and meters only, never for small text.
 
   Shapes: controls (buttons, inputs) 8px, panels 14px, status pills fully round.
+
+  When you change this file or any js/ file, bump the "?v=" number on the
+  <link>/<script> tags in the .html pages, so browsers don't keep an old copy.
 */
 
 :root {

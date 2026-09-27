@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#1C2430">
   <title>Settings</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=3">
 </head>
 <body>
   <header><div class="container">
@@ -20,6 +20,30 @@
       <h1>Settings</h1>
       <p>Everything here is stored on this computer only.</p>
     </div>
+
+    <section class="section grid-form">
+      <h2>Your identity</h2>
+      <div>
+        <label for="my-call-id">Your call ID (people type this to call you, it never changes)</label>
+        <div class="row">
+          <input type="text" id="my-call-id" readonly placeholder="Loading...">
+          <button id="copy-call-id-btn">Copy</button>
+        </div>
+        <label for="my-access-key">Your access key (secret, treat it like a password)</label>
+        <div class="row">
+          <input type="password" id="my-access-key" readonly autocomplete="off">
+          <button id="show-key-btn">Show</button>
+          <button id="copy-key-btn">Copy</button>
+        </div>
+        <p class="muted mt">To use the same call ID, contacts and settings in another browser, paste this key there below.</p>
+        <label for="sign-in-key">Use an existing identity on this browser</label>
+        <div class="row">
+          <input type="password" id="sign-in-key" placeholder="Paste an access key" autocomplete="off">
+          <button id="sign-in-btn">Use this key</button>
+        </div>
+        <p id="identity-status" class="muted mt" role="status"></p>
+      </div>
+    </section>
 
     <section class="section grid-form">
       <h2>Trusted contacts</h2>
@@ -104,7 +128,7 @@
     <section class="section grid-form danger-zone">
       <h2>Your data</h2>
       <div>
-        <p class="muted">Download a copy of everything, withdraw consent, or delete it all. Deleting can't be undone.</p>
+        <p class="muted">Download a copy of everything, withdraw consent, or delete it all. Deleting can't be undone. Your call ID stays the same.</p>
         <div class="row">
           <button id="export-btn">Download my data</button>
           <button id="withdraw-btn">Withdraw consent</button>
@@ -115,8 +139,8 @@
     </section>
   </main>
 
-  <script src="js/api.js"></script>
-  <script src="js/consent-check.js"></script>
-  <script src="js/settings.js"></script>
+  <script src="js/api.js?v=3"></script>
+  <script src="js/consent-check.js?v=3"></script>
+  <script src="js/settings.js?v=3"></script>
 </body>
 </html>

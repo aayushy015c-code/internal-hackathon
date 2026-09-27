@@ -150,6 +150,37 @@ el("demo-baseline-btn").onclick = async () => {
   }
 };
 
+// ---- Your identity ----
+
+async function loadIdentity() {
+  const me = await Api.Me.get();
+  el("my-call-id").value = me.callId;
+  el("my-access-key").value = Api.Me.accessKey() || "";
+}
+
+el("copy-call-id-btn").onclick = () => navigator.clipboard.writeText(el("my-call-id").value);
+el("copy-key-btn").onclick = () => {
+  navigator.clipboard.writeText(el("my-access-key").value);
+  el("identity-status").textContent = "Access key copied. Keep it private.";
+};
+el("show-key-btn").onclick = () => {
+  const box = el("my-access-key");
+  box.type = box.type === "password" ? "text" : "password";
+  el("show-key-btn").textContent = box.type === "password" ? "Show" : "Hide";
+};
+
+el("sign-in-btn").onclick = async () => {
+  const key = el("sign-in-key").value.trim();
+  if (!key) return;
+  try {
+    const me = await Api.Me.signIn(key);
+    el("identity-status").textContent = "Switched to " + me.callId + ". Loading its settings...";
+    setTimeout(() => location.reload(), 800);
+  } catch (err) {
+    el("identity-status").textContent = err.message;
+  }
+};
+
 // ---- Your data (DPDP rights) ----
 
 el("export-btn").onclick = async () => {
@@ -183,5 +214,6 @@ el("delete-all-btn").onclick = async () => {
   }
 };
 
+loadIdentity().catch(() => (el("identity-status").textContent = "Could not load your identity (is the core API running?)"));
 loadContacts().catch((err) => (el("contact-list").innerHTML = "<tr><td>Could not load contacts (is the core API running?)</td></tr>"));
 loadConfig().catch(() => {});

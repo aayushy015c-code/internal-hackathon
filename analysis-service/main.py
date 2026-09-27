@@ -5,14 +5,19 @@
 #   POST /end-session     call ended, forget everything about it
 #   POST /calibrate       ~10 seconds of normal talking -> saves your "normal voice"
 #   POST /calibrate/demo  use a made-up normal voice (for quick demos)
-#   POST /reload-config   re-read settings from the core API
+#   POST /reload-config   re-read this user's settings from the core API
+#
+# Every request except /health must carry the user's access key in the
+# X-User-Key header. We use it to load THAT user's settings and to send
+# alerts on their behalf, so users never mix.
 #
 # Try it in the browser: http://localhost:8000/docs
+import hashlib
 import time
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
@@ -27,7 +32,6 @@ ALLOWED_ORIGINS = ["http://localhost:5500", "http://127.0.0.1:5500"]
 @asynccontextmanager
 async def lifespan(app):
     # runs once when the server starts
-    config.load_from_core_api()
     if not config.STUB_MODE:
         audio.load_whisper()  # load now so the first clip isn't slow
     yield
@@ -64,9 +68,20 @@ def health():
     return {"status": "ok", "service": "analysis-service", "stub_mode": config.STUB_MODE}
 
 
+def user_key(x_user_key: str | None = Header(None, max_length=200)):
+    if not x_user_key:
+        raise HTTPException(401, "Missing access key (X-User-Key).")
+    return x_user_key
+
+
+def session_key(key, session_id):
+    # a call's session belongs to one user, so two users can't touch each other's session
+    return hashlib.sha256(key.encode()).hexdigest()[:16] + ":" + session_id
+
+
 @app.post("/reload-config")
-def reload_config():
-    return {"reloaded": config.load_from_core_api()}
+def reload_config(key: str = Depends(user_key)):
+    return {"reloaded": config.load_from_core_api(key)}
 
 
 def read_upload(file: UploadFile):
@@ -85,11 +100,14 @@ def analyze(
     latitude: float | None = Form(None, ge=-90, le=90),
     longitude: float | None = Form(None, ge=-180, le=180),
     force_alert: bool = Form(False),
+    key: str = Depends(user_key),
 ):
     start = time.time()
-    if not config.settings["consent_given"]:
+    settings = config.settings_for(key)
+    sid = session_key(key, session_id)
+    if not settings["consent_given"]:
         raise HTTPException(403, "Please accept the privacy notice first (consent page).")
-    if not config.settings["analysis_active"]:
+    if not settings["analysis_active"]:
         raise HTTPException(403, "Analysis is turned off in Settings.")
 
     data = read_upload(audio_file)
@@ -98,37 +116,39 @@ def analyze(
         result = scoring.fake_result(session_id, force_alert)
     else:
         samples = audio.decode(data)
-        pitch, loudness, silence = audio.measure(samples, config.settings["baseline_rms"])
+        pitch, loudness, silence = audio.measure(samples, settings["baseline_rms"])
         # skip whisper on silent clips: saves time, and whisper tends to
         # "hear" words like "Thank you." in silence
-        text = audio.transcribe(samples, config.settings["code_words"]) if silence < 0.95 else ""
-        result = scoring.evaluate(session_id, text, pitch, loudness, silence)
+        text = audio.transcribe(samples, settings["code_words"]) if silence < 0.95 else ""
+        result = scoring.evaluate(sid, text, pitch, loudness, silence, settings)
+        result["session_id"] = session_id
 
         # hands-free "false alarm": cancel the last alert from this call
-        session = scoring.get_session(session_id)
-        if session["last_alert_id"] and scoring.said_cancel_phrase(session_id):
-            cancel_alert(session["last_alert_id"])
+        session = scoring.get_session(sid)
+        if session["last_alert_id"] and scoring.said_cancel_phrase(sid, settings):
+            cancel_alert(key, session["last_alert_id"])
             session["last_alert_id"] = None
 
     if result["alert_triggered"]:
-        send_alert(session_id, result, latitude, longitude)
+        send_alert(key, sid, result, latitude, longitude)
 
     result["processing_ms"] = int((time.time() - start) * 1000)
     return result
 
 
 @app.post("/end-session")
-def end_session(session_id: str = Form(..., max_length=64)):
-    scoring.end_session(session_id)
+def end_session(session_id: str = Form(..., max_length=64), key: str = Depends(user_key)):
+    scoring.end_session(session_key(key, session_id))
     return {"ended": True}
 
 
-def send_alert(session_id, result, latitude, longitude):
-    session = scoring.get_session(session_id)
+def send_alert(key, sid, result, latitude, longitude):
+    session = scoring.get_session(sid)
     last_words = " ".join(" ".join(session["texts"]).split()[-10:])
     try:
-        response = httpx.post(f"{config.CORE_API_URL}/api/alerts", timeout=5, json={
-            "sessionId": session_id,
+        response = httpx.post(f"{config.CORE_API_URL}/api/alerts", timeout=5,
+                              headers={config.USER_HEADER: key}, json={
+            "sessionId": sid.split(":", 1)[1],
             "triggerPath": result["trigger_path"],
             "stressScore": result["stress_score"],
             "rollingScore": result["rolling_score"],
@@ -143,20 +163,20 @@ def send_alert(session_id, result, latitude, longitude):
         print("Could not send alert to core API:", e)
 
 
-def cancel_alert(alert_id):
+def cancel_alert(key, alert_id):
     try:
-        httpx.post(f"{config.CORE_API_URL}/api/alerts/{alert_id}/cancel", timeout=5)
+        httpx.post(f"{config.CORE_API_URL}/api/alerts/{alert_id}/cancel", headers={config.USER_HEADER: key}, timeout=5)
     except Exception as e:
         print("Could not cancel alert:", e)
 
 
 @app.post("/calibrate")
-def calibrate(audio_file: UploadFile = File(..., alias="audio")):
-    if not config.settings["consent_given"]:
+def calibrate(audio_file: UploadFile = File(..., alias="audio"), key: str = Depends(user_key)):
+    if not config.settings_for(key)["consent_given"]:
         raise HTTPException(403, "Please accept the privacy notice first (consent page).")
     data = read_upload(audio_file)
     if config.STUB_MODE:
-        return use_baseline(150.0, 0.05, "Stub mode: saved a fake baseline.")
+        return use_baseline(key, 150.0, 0.05, "Stub mode: saved a fake baseline.")
 
     samples = audio.decode(data)
     if samples.size < audio.SAMPLE_RATE * 3:
@@ -164,14 +184,14 @@ def calibrate(audio_file: UploadFile = File(..., alias="audio")):
     pitch, loudness, _ = audio.measure(samples)
     if pitch <= 0:
         raise HTTPException(400, "Couldn't hear a voice clearly, try again somewhere quieter.")
-    return use_baseline(pitch, loudness, "Done! This is now your normal voice.")
+    return use_baseline(key, pitch, loudness, "Done! This is now your normal voice.")
 
 
 @app.post("/calibrate/demo")
-def calibrate_demo():
-    return use_baseline(150.0, 0.05, "Using a demo baseline (not your real voice).")
+def calibrate_demo(key: str = Depends(user_key)):
+    return use_baseline(key, 150.0, 0.05, "Using a demo baseline (not your real voice).")
 
 
-def use_baseline(pitch, rms, message):
-    config.save_baseline(pitch, rms)
+def use_baseline(key, pitch, rms, message):
+    config.save_baseline(key, pitch, rms)
     return {"baseline_pitch_hz": round(pitch, 1), "baseline_rms": round(rms, 4), "message": message}

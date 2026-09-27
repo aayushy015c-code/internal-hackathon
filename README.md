@@ -53,6 +53,15 @@ The interface uses six colours only (a CI check fails if any other colour appear
 
 It follows your system's light or dark mode, respects "reduce motion", and every text colour passes WCAG AA contrast. Details are at the top of `frontend/css/styles.css`.
 
+## Your identity (call ID)
+
+The first time you open the app, it gives you a **permanent call ID** like `SS-K7P3-9QDM-X2WA`. It stays the same after refreshing, restarting the browser or restarting Docker, because it's stored in the database.
+
+- **Calling:** give your call ID to the people who might call you. They type it on the Call page.
+- **Your data is yours:** contacts, code words, calibration, disguise PIN and alerts all belong to your call ID. Another user never sees them.
+- **Another browser:** Settings > Your identity shows your secret **access key**. Paste it into "Use an existing identity" in the other browser to get the same call ID and data there. Keep the key private: it works like a password.
+- **Data from before this feature** automatically belongs to the first user who opens the app.
+
 ## How it decides to send an alert
 
 There are two ways an alert can be triggered:
