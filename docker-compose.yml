@@ -76,7 +76,7 @@ services:
     cap_drop: [ALL]
 
   tunnel:
-    image: cloudflare/cloudflared:2026.9.3
+    image: cloudflare/cloudflared:2026.10.0
     profiles: [tunnel] # only starts with: docker compose --profile tunnel up
     restart: unless-stopped
     depends_on:
