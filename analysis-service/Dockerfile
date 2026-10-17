@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.14-slim
 WORKDIR /app
 
 # install libraries first, so Docker can reuse this step when only our code changes
