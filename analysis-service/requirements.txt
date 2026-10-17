@@ -8,7 +8,7 @@ uvicorn[standard]==0.54.0
 python-multipart==0.0.32
 httpx==0.28.1
 python-dotenv==1.2.3
-numpy==2.5.3
+numpy==2.5.4
 
 # Audio + speech (not needed if STUB_MODE=true)
 av==18.1.0
